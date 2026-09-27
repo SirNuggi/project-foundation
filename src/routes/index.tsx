@@ -33,6 +33,5 @@ function Index() {
         This is your starting point. Describe what you'd like to build and it
         will take shape right here.
       </p>
--    </main>
-  );
+    </main>
 }
