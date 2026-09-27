@@ -1,0 +1,1 @@
+DELETE FROM public.rounds WHERE course_name = 'GC Fontana';

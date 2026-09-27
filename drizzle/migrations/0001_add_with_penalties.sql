@@ -1,0 +1,1 @@
+ALTER TABLE public.rounds ADD COLUMN IF NOT EXISTS with_penalties boolean NOT NULL DEFAULT true;

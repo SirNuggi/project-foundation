@@ -1,5 +1,55 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789645110010,
+      "tag": "0000_add_stroke_index_back",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789650148512,
+      "tag": "0001_add_with_penalties",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789665728937,
+      "tag": "0002_add_flights",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789755336374,
+      "tag": "0003_flights_created_by_and_delete_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789934061634,
+      "tag": "0004_add_round_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790074684572,
+      "tag": "0005_add_user_type_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790422769226,
+      "tag": "0006_add_groups",
+      "breakpoints": true
+    }
+  ]
 }

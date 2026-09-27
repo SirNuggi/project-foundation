@@ -1,0 +1,2 @@
+ALTER TABLE public.course_holes ADD COLUMN IF NOT EXISTS stroke_index_back integer;
+ALTER TABLE public.course_holes ADD CONSTRAINT course_holes_stroke_index_back_range CHECK (stroke_index_back IS NULL OR (stroke_index_back >= 1 AND stroke_index_back <= 18));
