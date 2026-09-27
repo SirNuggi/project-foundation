@@ -34,4 +34,5 @@ function Index() {
         will take shape right here.
       </p>
     </main>
+  );
 }
