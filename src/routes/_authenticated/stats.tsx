@@ -1,14 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Coins, Crown, Flag, MapPin, Trophy } from "lucide-react";
-import { getHallOfShame, getMyStats } from "@/lib/stats.functions";
+import { getHallOfShame, getMyStats, getUserGroups, type UserGroup } from "@/lib/stats.functions";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const eur = new Intl.NumberFormat("de-AT", { style: "currency", currency: "EUR" });
 
 const myStatsQuery = () => queryOptions({ queryKey: ["my-stats"], queryFn: () => getMyStats() });
-const hallQuery = () =>
-  queryOptions({ queryKey: ["hall-of-shame"], queryFn: () => getHallOfShame() });
+const userGroupsQuery = () =>
+  queryOptions({ queryKey: ["user-groups"], queryFn: () => getUserGroups() });
+const hallQuery = (groupId?: string) =>
+  queryOptions({
+    queryKey: ["hall-of-shame", groupId],
+    queryFn: () => getHallOfShame({ data: groupId ? { groupId } : undefined }),
+  });
 
 export const Route = createFileRoute("/_authenticated/stats")({
   head: () => ({
@@ -24,9 +37,16 @@ export const Route = createFileRoute("/_authenticated/stats")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: ({ context }) => {
-    context.queryClient.ensureQueryData(myStatsQuery());
-    context.queryClient.ensureQueryData(hallQuery());
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(myStatsQuery()),
+      context.queryClient.ensureQueryData(userGroupsQuery()),
+    ]);
+    const groups = context.queryClient.getQueryData<UserGroup[]>(["user-groups"]);
+    const firstGroup = groups?.[0];
+    if (firstGroup) {
+      await context.queryClient.ensureQueryData(hallQuery(firstGroup.id));
+    }
   },
   errorComponent: ({ error }) => (
     <main role="alert" className="min-h-screen bg-background px-6 py-10">
@@ -52,7 +72,18 @@ export const Route = createFileRoute("/_authenticated/stats")({
 
 function StatsPage() {
   const { data: stats } = useSuspenseQuery(myStatsQuery());
-  const { data: hall } = useSuspenseQuery(hallQuery());
+  const { data: userGroups } = useSuspenseQuery(userGroupsQuery());
+
+  const hasGroups = userGroups.length > 0;
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(
+    userGroups[0]?.id ?? ""
+  );
+
+  const activeGroupId = selectedGroupId || userGroups[0]?.id || "";
+
+  const { data: hall = [], isLoading: isHallLoading } = useQuery(
+    hallQuery(activeGroupId || undefined)
+  );
 
   const maxBreakdown = Math.max(1, ...stats.breakdown.map((b) => b.amount));
 
@@ -84,27 +115,50 @@ function StatsPage() {
         />
       </section>
 
-      <section className="px-6 pt-10">
-        <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
-          <Trophy className="h-4 w-4 text-primary" /> Hall of Shame
-        </h2>
-        <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
-          {hall.length === 0 && (
-            <p className="p-6 text-center text-sm text-muted-foreground">Noch keine Spieler.</p>
-          )}
-          {hall.map((p, i) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+      {hasGroups && (
+        <section className="px-6 pt-10">
+          <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest">
+            <Trophy className="h-4 w-4 text-primary" /> Hall of Shame
+          </h2>
+
+          <div className="mt-3">
+            <Select
+              value={activeGroupId}
+              onValueChange={(val) => setSelectedGroupId(val)}
             >
-              <span className="w-6 text-sm font-bold text-muted-foreground">{i + 1}.</span>
-              {i === 0 && p.euro > 0 && <Crown className="h-4 w-4 text-primary" />}
-              <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
-              <span className="font-black tabular-nums text-destructive">{eur.format(p.euro)}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+              <SelectTrigger className="w-full bg-card">
+                <SelectValue placeholder="Gruppe auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {userGroups.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
+            {hall.length === 0 && (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                {isHallLoading ? "Lade..." : "Noch keine Spieler in dieser Gruppe."}
+              </p>
+            )}
+            {hall.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+              >
+                <span className="w-6 text-sm font-bold text-muted-foreground">{i + 1}.</span>
+                {i === 0 && p.euro > 0 && <Crown className="h-4 w-4 text-primary" />}
+                <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+                <span className="font-black tabular-nums text-destructive">{eur.format(p.euro)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="px-6 pt-10">
         <h2 className="text-sm font-black uppercase tracking-widest">Wofür du zahlst</h2>

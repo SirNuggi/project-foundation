@@ -9,6 +9,31 @@ export type StatsRound = {
   euro: number;
 };
 
+export type UserGroup = {
+  id: string;
+  name: string;
+};
+
+export const getUserGroups = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("group_members")
+      .select("group_id, groups!inner(id, name)")
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return (data ?? [])
+      .filter((m) => Boolean(m.groups))
+      .map((m) => {
+        const g = m.groups as unknown as { id: string; name: string };
+        return {
+          id: g.id,
+          name: g.name,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "de"));
+  });
+
 export const getMyStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -97,10 +122,108 @@ export const getMyStats = createServerFn({ method: "GET" })
 
 export const getHallOfShame = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("penalty_hall_of_shame");
+  .inputValidator((input?: { groupId?: string }) => input)
+  .handler(async ({ data: inputData, context }) => {
+    const groupId = inputData?.groupId;
+
+    if (groupId) {
+      const sb = context.supabase;
+
+      // 1. Alle Mitglieder der Gruppe abrufen
+      const { data: members, error: gmError } = await sb
+        .from("group_members")
+        .select("user_id, profiles!inner(id, display_name, handle)")
+        .eq("group_id", groupId);
+      if (gmError) throw new Error(gmError.message);
+
+      // 2. Alle beendeten Runden dieser Gruppe abrufen
+      const { data: rounds, error: rError } = await sb
+        .from("rounds")
+        .select("id")
+        .eq("group_id", groupId)
+        .eq("status", "finished");
+      if (rError) throw new Error(rError.message);
+
+      const roundIds = (rounds ?? []).map((r) => r.id);
+
+      // 3. Round-Player und Strafen für diese Runden abrufen
+      let roundPlayers: {
+        id: string;
+        profile_id: string | null;
+        guest_name: string | null;
+        profiles: { id: string; display_name: string; handle: string } | null;
+      }[] = [];
+      let penalties: { round_player_id: string; amount: number }[] = [];
+
+      if (roundIds.length > 0) {
+        const { data: rpData, error: rpError } = await sb
+          .from("round_players")
+          .select("id, profile_id, guest_name, profiles(id, display_name, handle)")
+          .in("round_id", roundIds);
+        if (rpError) throw new Error(rpError.message);
+        roundPlayers = (rpData ?? []) as unknown as typeof roundPlayers;
+
+        const roundPlayerIds = roundPlayers.map((rp) => rp.id);
+        if (roundPlayerIds.length > 0) {
+          const { data: penData, error: penError } = await sb
+            .from("penalties")
+            .select("round_player_id, amount")
+            .in("round_player_id", roundPlayerIds);
+          if (penError) throw new Error(penError.message);
+          penalties = (penData ?? []) as unknown as typeof penalties;
+        }
+      }
+
+      // Map aller Gruppenmitglieder initialisieren (auch 0 Euro Beträge abbilden)
+      const profileMap = new Map<string, { id: string; name: string; handle: string; euro: number }>();
+
+      for (const m of members ?? []) {
+        const p = m.profiles as unknown as { id: string; display_name: string; handle: string } | null;
+        if (p) {
+          profileMap.set(p.id, {
+            id: p.id,
+            name: p.display_name || p.handle || "Unbekannt",
+            handle: p.handle || "",
+            euro: 0,
+          });
+        }
+      }
+
+      const rpToProfileId = new Map<string, string>();
+      for (const rp of roundPlayers) {
+        if (rp.profile_id) {
+          rpToProfileId.set(rp.id, rp.profile_id);
+          if (!profileMap.has(rp.profile_id)) {
+            const p = rp.profiles;
+            profileMap.set(rp.profile_id, {
+              id: rp.profile_id,
+              name: p?.display_name || rp.guest_name || "Unbekannt",
+              handle: p?.handle || "",
+              euro: 0,
+            });
+          }
+        }
+      }
+
+      for (const pen of penalties) {
+        const profileId = rpToProfileId.get(pen.round_player_id);
+        if (profileId && profileMap.has(profileId)) {
+          const entry = profileMap.get(profileId)!;
+          entry.euro += Number(pen.amount ?? 0);
+        }
+      }
+
+      return Array.from(profileMap.values())
+        .map((r) => ({
+          ...r,
+          euro: Math.round(r.euro * 100) / 100,
+        }))
+        .sort((a, b) => b.euro - a.euro || a.name.localeCompare(b.name, "de"));
+    }
+
+    const { data: rpcData, error } = await context.supabase.rpc("penalty_hall_of_shame");
     if (error) throw new Error(error.message);
-    return ((data ?? []) as {
+    return ((rpcData ?? []) as {
       profile_id: string;
       display_name: string;
       handle: string;
@@ -114,3 +237,5 @@ export const getHallOfShame = createServerFn({ method: "GET" })
       }))
       .sort((a, b) => b.euro - a.euro);
   });
+
+export const getStatsOverview = getHallOfShame;
