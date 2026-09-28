@@ -318,7 +318,21 @@ function RoundPage() {
       <header className="fixed inset-x-0 top-0 z-30 flex h-[120px] flex-col justify-center bg-secondary px-4 text-secondary-foreground">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-black leading-5 tracking-tight">
-            {board?.roundName ?? board?.courseName ?? (isLoading ? "Lade…" : "Runde")}
+            {board ? (
+              <>
+                <span>{board.roundName ?? board.courseName}</span>
+                {board.groupName ? (
+                  <>
+                    <span className="opacity-60"> · </span>
+                    <span>{board.groupName}</span>
+                  </>
+                ) : null}
+              </>
+            ) : isLoading ? (
+              "Lade…"
+            ) : (
+              "Runde"
+            )}
           </h1>
           {board?.roundName ? (
             <p className="truncate text-xs font-semibold leading-3 text-secondary-foreground/70">

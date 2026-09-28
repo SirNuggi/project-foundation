@@ -485,7 +485,7 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     const { data: round, error } = await sb
       .from("rounds")
       .select(
-        "id, name, course_id, course_name, played_on, created_at, hole_count, status, with_penalties, created_by, flights(id, flight_number, status, created_by), round_players(id, guest_name, position, profile_id, flight_id, tee, handicap_index, course_handicap, profiles(display_name, handle))",
+        "id, name, group_id, course_id, course_name, played_on, created_at, hole_count, status, with_penalties, created_by, groups(id, name), flights(id, flight_number, status, created_by), round_players(id, guest_name, position, profile_id, flight_id, tee, handicap_index, course_handicap, profiles(display_name, handle))",
       )
       .eq("id", data.roundId)
       .maybeSingle();
@@ -562,6 +562,8 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     return {
       id: round.id,
       roundName: round.name ?? null,
+      groupName: (round.groups as { name: string } | null)?.name ?? null,
+      groupId: round.group_id ?? null,
       courseName: round.course_name,
       playedOn: round.played_on,
       createdAt: round.created_at,
