@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus, X } from "lucide-react";
+import { Plus, Search, UserPlus, Users, X } from "lucide-react";
 import {
   createPassivePlayer,
   createRound,
@@ -11,6 +11,7 @@ import {
   listCourses,
   searchPlayers,
 } from "@/lib/golf.functions";
+import { listMyGroups, getGroupDetail } from "@/lib/groups.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,13 +59,21 @@ type TeeOption = { id: string | null; name: string };
 type SelectedPlayer = {
   key: string;
   name: string;
-  profileId?: string;
+  profileId?: string | undefined;
   teeName: string | null;
   handicapIndex: number;
-  userType?: "active" | "passive";
-  isMe?: boolean;
+  userType?: ("active" | "passive") | undefined;
+  isMe?: boolean | undefined;
 };
 type FlightDraft = { key: string; players: SelectedPlayer[] };
+type GroupMember = {
+  id: string;
+  userId: string;
+  role: "admin" | "member";
+  name: string;
+  handicapIndex: number;
+  userType: "active" | "passive";
+};
 
 const NEW_COURSE = "__new__";
 
@@ -195,6 +204,8 @@ function AddPlayerDialog({
   teeOptions,
   pickTee,
   takenProfileIds,
+  groupMembers,
+  groupName,
   onAdd,
 }: {
   open: boolean;
@@ -202,6 +213,8 @@ function AddPlayerDialog({
   teeOptions: TeeOption[];
   pickTee: (preferred: string | null | undefined) => string | null;
   takenProfileIds: string[];
+  groupMembers?: GroupMember[] | undefined;
+  groupName?: string | undefined;
   onAdd: (p: SelectedPlayer) => boolean;
 }) {
   const queryClient = useQueryClient();
@@ -231,6 +244,64 @@ function AddPlayerDialog({
     setTee(teeOptions[0]?.name ?? "Gelb");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const groupMemberUserIds = new Set((groupMembers ?? []).map((m) => m.userId));
+
+  // Build the unified list of players to show
+  type PlayerItem = {
+    id: string;
+    display_name: string;
+    handicap_index: number;
+    default_tee: string;
+    user_type: "active" | "passive";
+    isGroupMember: boolean;
+  };
+
+  let displayedPlayers: PlayerItem[] = [];
+
+  if (q) {
+    displayedPlayers = (results ?? [])
+      .map((r) => ({
+        id: r.id,
+        display_name: r.display_name,
+        handicap_index: r.handicap_index,
+        default_tee: r.default_tee,
+        user_type: (r.user_type === "passive" ? "passive" : "active") as "active" | "passive",
+        isGroupMember: groupMemberUserIds.has(r.id),
+      }))
+      .sort((a, b) => {
+        if (a.isGroupMember && !b.isGroupMember) return -1;
+        if (!a.isGroupMember && b.isGroupMember) return 1;
+        return 0;
+      });
+  } else {
+    // When no search term: list group members first, then other suggested players
+    const seenIds = new Set<string>();
+    for (const gm of groupMembers ?? []) {
+      seenIds.add(gm.userId);
+      displayedPlayers.push({
+        id: gm.userId,
+        display_name: gm.name,
+        handicap_index: gm.handicapIndex,
+        default_tee: "Gelb",
+        user_type: gm.userType,
+        isGroupMember: true,
+      });
+    }
+    for (const r of results ?? []) {
+      if (!seenIds.has(r.id)) {
+        seenIds.add(r.id);
+        displayedPlayers.push({
+          id: r.id,
+          display_name: r.display_name,
+          handicap_index: r.handicap_index,
+          default_tee: r.default_tee,
+          user_type: (r.user_type === "passive" ? "passive" : "active") as "active" | "passive",
+          isGroupMember: false,
+        });
+      }
+    }
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -298,7 +369,7 @@ function AddPlayerDialog({
               />
             </div>
             <div className="max-h-72 space-y-2 overflow-y-auto">
-              {!isFetching && (results?.length ?? 0) === 0 && (
+              {!isFetching && displayedPlayers.length === 0 && (
                 <p className="py-2 text-xs text-muted-foreground">
                   Kein Spieler gefunden.{" "}
                   <button type="button" className="font-bold text-foreground underline" onClick={() => { setName(q); setTab("new"); }}>
@@ -306,7 +377,7 @@ function AddPlayerDialog({
                   </button>
                 </p>
               )}
-              {results?.map((r) => {
+              {displayedPlayers.map((r) => {
                 const taken = takenProfileIds.includes(r.id);
                 return (
                   <button
@@ -328,11 +399,16 @@ function AddPlayerDialog({
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{r.display_name}</span>
-                      <span className="mt-1 flex items-center gap-2">
+                      <span className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="text-xs text-muted-foreground">HCP {formatHcp(r.handicap_index)}</span>
                         <Badge variant={r.user_type === "passive" ? "secondary" : "outline"}>
                           {r.user_type === "passive" ? "Passiv" : "Aktiv"}
                         </Badge>
+                        {r.isGroupMember && (
+                          <Badge variant="default" className="text-[10px]">
+                            {groupName ? groupName : "Gruppe"}
+                          </Badge>
+                        )}
                       </span>
                     </span>
                     <UserPlus className="h-5 w-5 text-primary" />
@@ -412,6 +488,8 @@ function FlightSection({
   teeOptions,
   pickTee,
   takenProfileIds,
+  groupMembers,
+  groupName,
   onAdd,
   onUpdate,
   onRemovePlayer,
@@ -422,6 +500,8 @@ function FlightSection({
   teeOptions: TeeOption[];
   pickTee: (preferred: string | null | undefined) => string | null;
   takenProfileIds: string[];
+  groupMembers?: GroupMember[] | undefined;
+  groupName?: string | undefined;
   onAdd: (p: SelectedPlayer) => boolean;
   onUpdate: (key: string, patch: Partial<SelectedPlayer>) => void;
   onRemovePlayer: (key: string) => void;
@@ -504,6 +584,8 @@ function FlightSection({
         teeOptions={teeOptions}
         pickTee={pickTee}
         takenProfileIds={takenProfileIds}
+        groupMembers={groupMembers}
+        groupName={groupName}
         onAdd={onAdd}
       />
       <PlayerEditDialog
@@ -521,6 +603,8 @@ function NewRound() {
   const navigate = useNavigate();
   const fetchCourses = useServerFn(listCourses);
   const fetchProfile = useServerFn(getMyProfile);
+  const fetchMyGroups = useServerFn(listMyGroups);
+  const fetchGroupDetail = useServerFn(getGroupDetail);
   const submitRound = useServerFn(createRound);
 
   const [roundName, setRoundName] = useState("");
@@ -540,6 +624,7 @@ function NewRound() {
   const [playedOn, setPlayedOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [holeCount, setHoleCount] = useState<9 | 18>(18);
   const [withPenalties, setWithPenalties] = useState(true);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [myTee, setMyTee] = useState<string | null>(null);
   const [myHandicap, setMyHandicap] = useState<number | null>(null);
   const [flights, setFlights] = useState<FlightDraft[]>([{ key: "f1", players: [] }]);
@@ -547,11 +632,20 @@ function NewRound() {
 
   const { data: courses } = useQuery({ queryKey: ["courses"], queryFn: () => fetchCourses() });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
+  const { data: groups } = useQuery({ queryKey: ["my-groups"], queryFn: () => fetchMyGroups() });
+  const { data: selectedGroupDetail } = useQuery({
+    queryKey: ["group-detail", groupId],
+    queryFn: () => (groupId ? fetchGroupDetail({ data: { groupId } }) : null),
+    enabled: !!groupId,
+  });
 
-  const takenProfileIds = flights
-    .flatMap((f) => f.players)
-    .map((p) => p.profileId)
-    .filter((id): id is string => !!id);
+  const takenProfileIds = [
+    ...(me?.profile?.id ? [me.profile.id] : []),
+    ...flights
+      .flatMap((f) => f.players)
+      .map((p) => p.profileId)
+      .filter((id): id is string => !!id),
+  ];
 
   const selectedCourse = courses?.find((c) => c.id === courseId) ?? null;
   const teeOptions: TeeOption[] = creatingCourse
@@ -574,6 +668,7 @@ function NewRound() {
   const mePlayer: SelectedPlayer = {
     key: "__me__",
     name: me?.profile?.display_name ? `${me.profile.display_name} (Du)` : "Du",
+    profileId: me?.profile?.id,
     teeName: effectiveMyTee,
     handicapIndex: myHandicap ?? Number(me?.profile?.handicap_index ?? 54),
     isMe: true,
@@ -633,6 +728,7 @@ function NewRound() {
       const result = await submitRound({
         data: {
           name: roundName.trim() ? roundName.trim().slice(0, 100) : null,
+          groupId: groupId,
           courseId: creatingCourse ? null : courseId,
           courseName: creatingCourse ? newName.trim() : courseName.trim().slice(0, 100),
           newCourse: creatingCourse
@@ -908,6 +1004,26 @@ function NewRound() {
           <Switch id="with-penalties" checked={withPenalties} onCheckedChange={setWithPenalties} />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="group-select">Gruppe</Label>
+          <Select
+            value={groupId ?? "none"}
+            onValueChange={(val) => setGroupId(val === "none" ? null : val)}
+          >
+            <SelectTrigger id="group-select" className="h-13">
+              <SelectValue placeholder="Gruppe wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Keine Gruppe</SelectItem>
+              {groups?.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-4">
           {flights.map((f, i) => (
             <FlightSection
@@ -917,6 +1033,8 @@ function NewRound() {
               teeOptions={teeOptions}
               pickTee={pickTee}
               takenProfileIds={takenProfileIds}
+              groupMembers={selectedGroupDetail?.members}
+              groupName={selectedGroupDetail?.name}
               onAdd={(p) => addPlayer(f.key, p)}
               onUpdate={(key, patch) => {
                 if (key === mePlayer.key) {

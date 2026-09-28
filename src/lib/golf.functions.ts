@@ -46,6 +46,7 @@ const flightSchema = z.object({
 
 const createRoundSchema = z.object({
   name: z.string().trim().max(100).nullable().optional(),
+  groupId: z.string().uuid().nullable().optional(),
   courseId: z.string().uuid().nullable().optional(),
   courseName: z.string().trim().min(1).max(100),
   newCourse: newCourseSchema.nullable().optional(),
@@ -364,6 +365,7 @@ export const createRound = createServerFn({ method: "POST" })
       .from("rounds")
       .insert({
         name: data.name?.trim() ? data.name.trim().slice(0, 100) : null,
+        group_id: data.groupId ?? null,
         course_id: courseId,
         course_name: courseName,
         played_on: data.playedOn,
