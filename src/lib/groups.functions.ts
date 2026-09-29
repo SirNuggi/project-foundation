@@ -44,6 +44,33 @@ export const createGroup = createServerFn({ method: "POST" })
     return row;
   });
 
+export const renameGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ groupId: z.string().uuid(), name: z.string().trim().min(1).max(50) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: membership, error: membershipError } = await context.supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", data.groupId)
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!membership) throw new Error("Nur Gruppen-Admins können die Gruppe umbenennen");
+
+    const { data: row, error } = await context.supabase
+      .from("groups")
+      .update({ name: data.name })
+      .eq("id", data.groupId)
+      .select("id, name")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Gruppe nicht gefunden oder keine Berechtigung");
+    return row;
+  });
+
 export const getGroup = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ groupId: z.string().uuid() }).parse(d))

@@ -2,9 +2,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddGroupMemberDialog } from "@/components/group/AddGroupMemberDialog";
-import { addGroupMember, getGroupDetail, removeGroupMember } from "@/lib/groups.functions";
+import { addGroupMember, getGroupDetail, removeGroupMember, renameGroup } from "@/lib/groups.functions";
 
 export const Route = createFileRoute("/_authenticated/groups/$groupId")({
   head: () => ({
@@ -40,8 +56,12 @@ function GroupPage() {
   const fetchGroup = useServerFn(getGroupDetail);
   const addMember = useServerFn(addGroupMember);
   const removeMember = useServerFn(removeGroupMember);
+  const rename = useServerFn(renameGroup);
   const [addOpen, setAddOpen] = useState(false);
   const [toRemove, setToRemove] = useState<Member | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const key = ["group", groupId];
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => fetchGroup({ data: { groupId } }) });
   const isAdmin = data?.myRole === "admin";
@@ -75,6 +95,28 @@ function GroupPage() {
     }
   }
 
+  function openRenameDialog() {
+    setRenameValue(data?.name ?? "");
+    setRenameOpen(true);
+  }
+
+  async function handleRename(e: React.FormEvent) {
+    e.preventDefault();
+    const name = renameValue.trim();
+    if (!name || !data || name === data.name) return;
+    setRenaming(true);
+    try {
+      await rename({ data: { groupId, name } });
+      await refresh();
+      setRenameOpen(false);
+      toast.success("Gruppe umbenannt");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Fehler beim Umbenennen");
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background pb-16">
       <header className="relative bg-secondary px-6 pb-8 pt-7 text-secondary-foreground">
@@ -85,9 +127,26 @@ function GroupPage() {
               {isLoading ? "…" : (data?.name ?? "Gruppe nicht gefunden")}
             </h1>
           </div>
-          <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 shrink-0 items-center justify-center">
-            <X className="h-6 w-6" />
-          </Link>
+          <div className="flex shrink-0 items-center gap-1">
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label="Menü"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={openRenameDialog}>
+                    <Pencil className="mr-2 h-4 w-4" /> Umbenennen
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
+              <X className="h-6 w-6" />
+            </Link>
+          </div>
         </div>
         {isAdmin && (
           <button
@@ -145,6 +204,38 @@ function GroupPage() {
         memberIds={data?.members.map((m) => m.userId) ?? []}
         onAdd={handleAdd}
       />
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-lg">
+          <form onSubmit={handleRename} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle>Gruppe umbenennen</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="rename-group-name">Gruppenname</Label>
+              <Input
+                id="rename-group-name"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                maxLength={50}
+                autoFocus
+                className="h-13"
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
+                Abbrechen
+              </Button>
+              <Button
+                type="submit"
+                disabled={renaming || !renameValue.trim() || renameValue.trim() === data?.name}
+              >
+                {renaming ? "Speichere…" : "Speichern"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}>
         <AlertDialogContent className="w-[calc(100%-2rem)] rounded-lg">
