@@ -216,7 +216,7 @@ function RoundPage() {
     const row = board?.scores.find(
       (s) => s.round_player_id === playerId && s.hole_number === hole,
     );
-    return { strokes: row?.strokes ?? personalParFor(playerId), putts: row?.putts ?? 0 };
+    return { strokes: row?.strokes ?? 0, putts: row?.putts ?? 0 };
   }
 
 
@@ -560,7 +560,9 @@ function RoundPage() {
                 <Counter
                   label="Schläge"
                   value={s.strokes}
-                  min={1}
+                  min={0}
+                  zeroPlus={par}
+                  zeroMinus={par - 1}
                   disabled={finished}
                   onChange={(v) => update(p.id, { ...s, strokes: v })}
                 />
