@@ -59,12 +59,16 @@ function Counter({
   onChange,
   disabled,
   min,
+  zeroPlus,
+  zeroMinus,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   disabled?: boolean;
   min: number;
+  zeroPlus?: number;
+  zeroMinus?: number;
 }) {
   return (
     <div className="min-w-0 flex-1">
@@ -75,8 +79,8 @@ function Counter({
         <button
           type="button"
           aria-label={`${label} verringern`}
-          disabled={disabled || value <= min}
-          onClick={() => onChange(value - 1)}
+          disabled={disabled || (value <= min && zeroMinus == null)}
+          onClick={() => onChange(value === 0 && zeroMinus != null ? zeroMinus : value - 1)}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground active:scale-95 disabled:opacity-30"
         >
           <Minus className="h-5 w-5" />
@@ -86,7 +90,7 @@ function Counter({
           type="button"
           aria-label={`${label} erhöhen`}
           disabled={disabled}
-          onClick={() => onChange(value + 1)}
+          onClick={() => onChange(value === 0 && zeroPlus != null ? zeroPlus : value + 1)}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground active:scale-95 disabled:opacity-30"
         >
           <Plus className="h-5 w-5" />
@@ -212,7 +216,7 @@ function RoundPage() {
     const row = board?.scores.find(
       (s) => s.round_player_id === playerId && s.hole_number === hole,
     );
-    return { strokes: row?.strokes ?? personalParFor(playerId), putts: row?.putts ?? 0 };
+    return { strokes: row?.strokes ?? 0, putts: row?.putts ?? 0 };
   }
 
 
@@ -556,7 +560,9 @@ function RoundPage() {
                 <Counter
                   label="Schläge"
                   value={s.strokes}
-                  min={1}
+                  min={0}
+                  zeroPlus={par}
+                  zeroMinus={par - 1}
                   disabled={finished}
                   onChange={(v) => update(p.id, { ...s, strokes: v })}
                 />
