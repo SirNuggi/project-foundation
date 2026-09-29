@@ -299,6 +299,7 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
+          group_id: string | null
           hole_number: number | null
           id: string
           is_automatic: boolean
@@ -311,6 +312,7 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          group_id?: string | null
           hole_number?: number | null
           id?: string
           is_automatic?: boolean
@@ -323,6 +325,7 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          group_id?: string | null
           hole_number?: number | null
           id?: string
           is_automatic?: boolean
@@ -337,6 +340,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "penalty_rules"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "penalties_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "penalties_round_id_fkey"

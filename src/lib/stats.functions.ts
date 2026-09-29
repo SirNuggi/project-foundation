@@ -136,7 +136,7 @@ export const getHallOfShame = createServerFn({ method: "GET" })
         .eq("group_id", groupId);
       if (gmError) throw new Error(gmError.message);
 
-      // 2. Alle beendeten Runden dieser Gruppe abrufen
+      // 2. Beendete Runden für diese Gruppe abrufen
       const { data: rounds, error: rError } = await sb
         .from("rounds")
         .select("id")
@@ -146,32 +146,27 @@ export const getHallOfShame = createServerFn({ method: "GET" })
 
       const roundIds = (rounds ?? []).map((r) => r.id);
 
-      // 3. Round-Player und Strafen für diese Runden abrufen
-      let roundPlayers: {
-        id: string;
-        profile_id: string | null;
-        guest_name: string | null;
-        profiles: { id: string; display_name: string; handle: string } | null;
+      // 3. Nur Strafen abrufen, die exakt group_id = groupId haben und zu beendeten Gruppenrunden gehören
+      // Strafen mit group_id IS NULL (z.B. aus privaten Runden) werden strikt ausgeschlossen
+      let penalties: {
+        round_player_id: string;
+        amount: number;
+        group_id: string | null;
+        round_players: {
+          profile_id: string | null;
+          guest_name: string | null;
+          profiles: { id: string; display_name: string; handle: string } | null;
+        } | null;
       }[] = [];
-      let penalties: { round_player_id: string; amount: number }[] = [];
 
       if (roundIds.length > 0) {
-        const { data: rpData, error: rpError } = await sb
-          .from("round_players")
-          .select("id, profile_id, guest_name, profiles(id, display_name, handle)")
+        const { data: penData, error: penError } = await sb
+          .from("penalties")
+          .select("round_player_id, amount, group_id, round_players(profile_id, guest_name, profiles(id, display_name, handle))")
+          .eq("group_id", groupId)
           .in("round_id", roundIds);
-        if (rpError) throw new Error(rpError.message);
-        roundPlayers = (rpData ?? []) as unknown as typeof roundPlayers;
-
-        const roundPlayerIds = roundPlayers.map((rp) => rp.id);
-        if (roundPlayerIds.length > 0) {
-          const { data: penData, error: penError } = await sb
-            .from("penalties")
-            .select("round_player_id, amount")
-            .in("round_player_id", roundPlayerIds);
-          if (penError) throw new Error(penError.message);
-          penalties = (penData ?? []) as unknown as typeof penalties;
-        }
+        if (penError) throw new Error(penError.message);
+        penalties = (penData ?? []) as unknown as typeof penalties;
       }
 
       // Map aller Gruppenmitglieder initialisieren (auch 0 Euro Beträge abbilden)
@@ -189,10 +184,10 @@ export const getHallOfShame = createServerFn({ method: "GET" })
         }
       }
 
-      const rpToProfileId = new Map<string, string>();
-      for (const rp of roundPlayers) {
-        if (rp.profile_id) {
-          rpToProfileId.set(rp.id, rp.profile_id);
+      // Strafen mit group_id = groupId summieren
+      for (const pen of penalties) {
+        const rp = pen.round_players;
+        if (rp?.profile_id) {
           if (!profileMap.has(rp.profile_id)) {
             const p = rp.profiles;
             profileMap.set(rp.profile_id, {
@@ -202,13 +197,7 @@ export const getHallOfShame = createServerFn({ method: "GET" })
               euro: 0,
             });
           }
-        }
-      }
-
-      for (const pen of penalties) {
-        const profileId = rpToProfileId.get(pen.round_player_id);
-        if (profileId && profileMap.has(profileId)) {
-          const entry = profileMap.get(profileId)!;
+          const entry = profileMap.get(rp.profile_id)!;
           entry.euro += Number(pen.amount ?? 0);
         }
       }

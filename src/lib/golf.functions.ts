@@ -585,6 +585,87 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     };
   });
 
+async function resolvePenaltyGroupId(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any,
+  roundId: string,
+  roundPlayerId: string,
+): Promise<string | null> {
+  const [{ data: round }, { data: player }] = await Promise.all([
+    sb.from("rounds").select("group_id").eq("id", roundId).maybeSingle(),
+    sb.from("round_players").select("profile_id").eq("id", roundPlayerId).maybeSingle(),
+  ]);
+
+  const groupId = round?.group_id;
+  const profileId = player?.profile_id;
+
+  if (!groupId || !profileId) {
+    return null;
+  }
+
+  const { data: member } = await sb
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", profileId)
+    .maybeSingle();
+
+  return member ? groupId : null;
+}
+
+async function syncRoundPenaltiesGroup(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sb: any,
+  roundId: string,
+) {
+  const { data: round } = await sb
+    .from("rounds")
+    .select("group_id")
+    .eq("id", roundId)
+    .maybeSingle();
+
+  if (!round?.group_id) {
+    await sb.from("penalties").update({ group_id: null }).eq("round_id", roundId);
+    return;
+  }
+
+  const { data: players } = await sb
+    .from("round_players")
+    .select("id, profile_id")
+    .eq("round_id", roundId);
+
+  const { data: members } = await sb
+    .from("group_members")
+    .select("user_id")
+    .eq("group_id", round.group_id);
+
+  const memberUserIds = new Set((members ?? []).map((m: { user_id: string }) => m.user_id));
+
+  const memberPlayerIds: string[] = [];
+  const nonMemberPlayerIds: string[] = [];
+
+  for (const p of players ?? []) {
+    if (p.profile_id && memberUserIds.has(p.profile_id)) {
+      memberPlayerIds.push(p.id);
+    } else {
+      nonMemberPlayerIds.push(p.id);
+    }
+  }
+
+  if (memberPlayerIds.length > 0) {
+    await sb
+      .from("penalties")
+      .update({ group_id: round.group_id })
+      .in("round_player_id", memberPlayerIds);
+  }
+  if (nonMemberPlayerIds.length > 0) {
+    await sb
+      .from("penalties")
+      .update({ group_id: null })
+      .in("round_player_id", nonMemberPlayerIds);
+  }
+}
+
 async function syncAutoPenalties(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sb: any,
@@ -598,6 +679,8 @@ async function syncAutoPenalties(
     userId: string;
   },
 ) {
+  const penaltyGroupId = await resolvePenaltyGroupId(sb, args.roundId, args.roundPlayerId);
+
   const { data: rules } = await sb
     .from("penalty_rules")
     .select("code, points, amount")
@@ -626,6 +709,7 @@ async function syncAutoPenalties(
           amount: amountFor(code),
           is_automatic: true,
           created_by: args.userId,
+          group_id: penaltyGroupId,
         },
         { onConflict: "round_player_id,hole_number,code" },
       );
@@ -711,6 +795,7 @@ export const toggleGirly = createServerFn({ method: "POST" })
       .maybeSingle();
     if (roundRow?.with_penalties === false) return { ok: true };
     if (data.active) {
+      const penaltyGroupId = await resolvePenaltyGroupId(sb, data.roundId, data.roundPlayerId);
       const { data: rule } = await sb
         .from("penalty_rules")
         .select("points, amount")
@@ -726,6 +811,7 @@ export const toggleGirly = createServerFn({ method: "POST" })
           amount: Number(rule?.amount ?? 0),
           is_automatic: false,
           created_by: context.userId,
+          group_id: penaltyGroupId,
         },
         { onConflict: "round_player_id,hole_number,code" },
       );
@@ -769,6 +855,7 @@ export const finishFlight = createServerFn({ method: "POST" })
         .update({ status: "finished" })
         .eq("id", data.roundId);
       if (roundError) throw new Error(roundError.message);
+      await syncRoundPenaltiesGroup(sb, data.roundId);
     }
     return { ok: true, roundFinished };
   });
@@ -970,6 +1057,7 @@ export const finishRound = createServerFn({ method: "POST" })
       .update({ status: "finished" })
       .eq("id", data.roundId);
     if (error) throw new Error(error.message);
+    await syncRoundPenaltiesGroup(context.supabase, data.roundId);
     return { ok: true };
   });
 
