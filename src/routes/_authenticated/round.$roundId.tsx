@@ -234,6 +234,8 @@ function RoundPage() {
     const key = `${playerId}-${hole}`;
     setDrafts((d) => ({ ...d, [key]: next }));
     if (timers.current[key]) clearTimeout(timers.current[key]);
+    // 0 Schläge = noch nicht eingetragen → nichts speichern
+    if (next.strokes < 1) return;
     timers.current[key] = setTimeout(async () => {
       try {
         await saveScore({
