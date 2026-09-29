@@ -191,17 +191,8 @@ export const getHallOfShame = createServerFn({ method: "GET" })
 
       const rpToProfileId = new Map<string, string>();
       for (const rp of roundPlayers) {
-        if (rp.profile_id) {
+        if (rp.profile_id && profileMap.has(rp.profile_id)) {
           rpToProfileId.set(rp.id, rp.profile_id);
-          if (!profileMap.has(rp.profile_id)) {
-            const p = rp.profiles;
-            profileMap.set(rp.profile_id, {
-              id: rp.profile_id,
-              name: p?.display_name || rp.guest_name || "Unbekannt",
-              handle: p?.handle || "",
-              euro: 0,
-            });
-          }
         }
       }
 
