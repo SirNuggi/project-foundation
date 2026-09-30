@@ -127,26 +127,31 @@ function GroupPage() {
               {isLoading ? "…" : (data?.name ?? "Gruppe nicht gefunden")}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label="Menü"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent"
-                >
-                  <MoreVertical className="h-5 w-5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={openRenameDialog}>
-                    <Pencil className="mr-2 h-4 w-4" /> Umbenennen
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
-              <X className="h-6 w-6" />
-            </Link>
-          </div>
+          {/* Geänderter Container: Spalten-Layout, nach rechts ausgerichtet, mit Abstand (gap-3) */}
+{/* Geänderter Container: Absolut oben rechts positioniert, Spalten-Layout mit Abstand */}
+<div className="absolute right-6 top-6 flex flex-col items-center gap-1">
+  {/* Schließen-Button oben */}
+  <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
+    <X className="h-6 w-6" />
+  </Link>
+
+  {/* Dropdown-Menü direkt darunter */}
+  {isAdmin && (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Menü"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent"
+      >
+        <MoreVertical className="h-5 w-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={openRenameDialog}>
+          <Pencil className="mr-2 h-4 w-4" /> Umbenennen
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )}
+</div>
         </div>
         {isAdmin && (
           <button
