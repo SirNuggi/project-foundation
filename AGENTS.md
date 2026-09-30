@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- AI-Testlogin: Konto testuser@birdie.test (kein Admin), Zugangsdaten in Secrets TEST_USER/TEST_PASS; im Preview per /auth-Formular anmelden, da keine Sitzung injiziert wird (externes Supabase).
