@@ -10,13 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +50,6 @@ const groupTabs: SubNavItem[] = [
   { id: "members", label: "Mitglieder", icon: Users },
   { id: "settings", label: "Einstellungen", icon: Settings },
 ];
-
 
 function GroupPage() {
   const { groupId } = Route.useParams();
@@ -137,7 +130,14 @@ function GroupPage() {
               {isLoading ? "…" : (data?.name ?? "Gruppe nicht gefunden")}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          {/* Geänderter Container: Absolut oben rechts positioniert, Spalten-Layout mit Abstand */}
+          <div className="absolute right-6 top-7 flex flex-col items-center gap-2">
+            {/* Schließen-Button oben */}
+            <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
+              <X className="h-6 w-6" />
+            </Link>
+
+            {/* Dropdown-Menü direkt darunter */}
             {isAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -153,22 +153,22 @@ function GroupPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
-              <X className="h-6 w-6" />
-            </Link>
           </div>
         </div>
       </header>
 
       <SubNavigation items={groupTabs} value={tab} onChange={setTab} />
 
-      <SlideViews index={Math.max(0, groupTabs.findIndex((t) => t.id === tab))}>
+      <SlideViews
+        index={Math.max(
+          0,
+          groupTabs.findIndex((t) => t.id === tab),
+        )}
+      >
         <section className="px-6 pt-8 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-xl font-black">
-                Mitglieder{data ? ` (${data.members.length})` : ""}
-              </h2>
+              <h2 className="text-xl font-black">Mitglieder{data ? ` (${data.members.length})` : ""}</h2>
               <p className="text-sm text-muted-foreground">Mitglieder dieser Gruppe</p>
             </div>
             {isAdmin && (
@@ -186,7 +186,9 @@ function GroupPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold">{m.name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-muted-foreground">HCP {m.handicapIndex.toFixed(1).replace(".", ",")}</span>
+                      <span className="text-xs text-muted-foreground">
+                        HCP {m.handicapIndex.toFixed(1).replace(".", ",")}
+                      </span>
                       <Badge variant={m.userType === "passive" ? "secondary" : "outline"}>
                         {m.userType === "passive" ? "Passiv" : "Aktiv"}
                       </Badge>
@@ -220,7 +222,6 @@ function GroupPage() {
         </section>
       </SlideViews>
 
-
       <AddGroupMemberDialog
         open={addOpen}
         onOpenChange={setAddOpen}
@@ -249,10 +250,7 @@ function GroupPage() {
               <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
                 Abbrechen
               </Button>
-              <Button
-                type="submit"
-                disabled={renaming || !renameValue.trim() || renameValue.trim() === data?.name}
-              >
+              <Button type="submit" disabled={renaming || !renameValue.trim() || renameValue.trim() === data?.name}>
                 {renaming ? "Speichere…" : "Speichern"}
               </Button>
             </DialogFooter>
@@ -270,7 +268,10 @@ function GroupPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmRemove}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Entfernen
             </AlertDialogAction>
           </AlertDialogFooter>
