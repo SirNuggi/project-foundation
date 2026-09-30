@@ -185,132 +185,134 @@ function ProfilePage() {
         </div>
       </header>
 
-      <form onSubmit={submit} className="mt-8 space-y-6 px-6">
-        <div className="space-y-2">
-          <Label htmlFor="name">Anzeigename</Label>
-          <Input
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={50}
-            className="h-13"
-          />
-        </div>
+      <SubNavigation items={profileTabs} value={tab} onChange={setTab} />
 
-        <div className="space-y-2">
-          <Label htmlFor="hcp">Handicap-Index</Label>
-          <Input
-            id="hcp"
-            inputMode="decimal"
-            value={hcp}
-            onChange={(e) => setHcp(e.target.value)}
-            className="h-13"
-          />
-          <p className="text-xs text-muted-foreground">Zum Beispiel -24,0 · Standard ist -54,0.</p>
-        </div>
+      <SlideViews index={Math.max(0, profileTabs.findIndex((t) => t.id === tab))}>
+        <form onSubmit={submit} className="space-y-6 px-6 pt-8 pb-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Anzeigename</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={50}
+              className="h-13"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="tee">Bevorzugter Abschlag</Label>
-          <Input
-            id="tee"
-            value={tee}
-            onChange={(e) => setTee(e.target.value)}
-            maxLength={30}
-            placeholder="Gelb"
-            className="h-13"
-          />
-          <div className="flex flex-wrap gap-2">
-            {["Gelb", "Rot", "Weiß", "Blau"].map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setTee(option)}
-                className="rounded-lg border border-border px-3 py-1 text-xs font-bold"
-              >
-                {option}
-              </button>
+          <div className="space-y-2">
+            <Label htmlFor="hcp">Handicap-Index</Label>
+            <Input
+              id="hcp"
+              inputMode="decimal"
+              value={hcp}
+              onChange={(e) => setHcp(e.target.value)}
+              className="h-13"
+            />
+            <p className="text-xs text-muted-foreground">Zum Beispiel -24,0 · Standard ist -54,0.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tee">Bevorzugter Abschlag</Label>
+            <Input
+              id="tee"
+              value={tee}
+              onChange={(e) => setTee(e.target.value)}
+              maxLength={30}
+              placeholder="Gelb"
+              className="h-13"
+            />
+            <div className="flex flex-wrap gap-2">
+              {["Gelb", "Rot", "Weiß", "Blau"].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTee(option)}
+                  className="rounded-lg border border-border px-3 py-1 text-xs font-bold"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Wird beim Rundenstart vorausgewählt, wenn der Platz diesen Abschlag hat.
+            </p>
+          </div>
+
+          <Button type="submit" disabled={saving} className="h-14 w-full text-base font-bold">
+            {saving ? "Speichere…" : "Speichern"}
+          </Button>
+        </form>
+
+        <section className="px-6 pt-8 pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black">Meine Spieler & Gäste</h2>
+              <p className="text-sm text-muted-foreground">Dauerhafte Mitspieler ohne eigenes Konto</p>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              aria-label="Neuen Spieler anlegen"
+              onClick={() => {
+                setEditingPlayerId(null);
+                setPlayerDialogOpen(true);
+              }}
+            >
+              <Plus />
+            </Button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {passivePlayers.length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+                Noch keine passiven Spieler angelegt.
+              </p>
+            )}
+            {passivePlayers.map((player) => (
+              <div key={player.id} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">{player.display_name}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      HCP {String(player.handicap_index).replace(".", ",")}
+                    </span>
+                    <Badge variant="secondary">Passiv</Badge>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${player.display_name} bearbeiten`}
+                  onClick={() => {
+                    setEditingPlayerId(player.id);
+                    setPlayerDialogOpen(true);
+                  }}
+                >
+                  <Pencil />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${player.display_name} löschen`}
+                  className="text-destructive"
+                  onClick={() => setDeletingPlayerId(player.id)}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Wird beim Rundenstart vorausgewählt, wenn der Platz diesen Abschlag hat.
-          </p>
-        </div>
+        </section>
 
-        <Button type="submit" disabled={saving} className="h-14 w-full text-base font-bold">
-          {saving ? "Speichere…" : "Speichern"}
-        </Button>
-      </form>
-
-      <Accordion type="multiple" className="mt-10 border-t border-border px-6">
-      <AccordionItem value="players">
-        <AccordionTrigger className="text-xl font-black hover:no-underline">Meine Spieler & Gäste</AccordionTrigger>
-        <AccordionContent>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm text-muted-foreground">Dauerhafte Mitspieler ohne eigenes Konto</p>
-          </div>
-          <Button
-            type="button"
-            size="icon"
-            aria-label="Neuen Spieler anlegen"
-            onClick={() => {
-              setEditingPlayerId(null);
-              setPlayerDialogOpen(true);
-            }}
-          >
-            <Plus />
-          </Button>
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {passivePlayers.length === 0 && (
-            <p className="rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-              Noch keine passiven Spieler angelegt.
-            </p>
-          )}
-          {passivePlayers.map((player) => (
-            <div key={player.id} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{player.display_name}</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    HCP {String(player.handicap_index).replace(".", ",")}
-                  </span>
-                  <Badge variant="secondary">Passiv</Badge>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`${player.display_name} bearbeiten`}
-                onClick={() => {
-                  setEditingPlayerId(player.id);
-                  setPlayerDialogOpen(true);
-                }}
-              >
-                <Pencil />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`${player.display_name} löschen`}
-                className="text-destructive"
-                onClick={() => setDeletingPlayerId(player.id)}
-              >
-                <Trash2 />
-              </Button>
-            </div>
-          ))}
-        </div>
-        </AccordionContent>
-      </AccordionItem>
-      <AccordionItem value="groups">
-        <AccordionTrigger className="text-xl font-black hover:no-underline">Meine Gruppen</AccordionTrigger>
-        <AccordionContent>
+        <section className="px-6 pt-8 pb-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">Gruppen, in denen du Mitglied bist</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-black">Meine Gruppen</h2>
+              <p className="text-sm text-muted-foreground">Gruppen, in denen du Mitglied bist</p>
+            </div>
             <Button type="button" size="icon" aria-label="Neue Gruppe erstellen" onClick={() => setGroupDialogOpen(true)}>
               <Plus />
             </Button>
@@ -340,9 +342,9 @@ function ProfilePage() {
               </Link>
             ))}
           </div>
-        </AccordionContent>
-      </AccordionItem>
-      </Accordion>
+        </section>
+      </SlideViews>
+
 
       <CreateGroupDialog
         open={groupDialogOpen}
