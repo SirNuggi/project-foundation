@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { listMyGroups, createGroup } from "@/lib/groups.functions";
 import { CreateGroupDialog } from "@/components/group/CreateGroupDialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { SubNavigation, SlideViews, type SubNavItem } from "@/components/SubNavigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { LogOut, Pencil, Plus, Trash2, UserRound, Users, UsersRound } from "lucide-react";
+
 import {
   createPassivePlayer,
   deletePassivePlayer,
@@ -36,7 +37,14 @@ import {
   type PassivePlayerFormValue,
 } from "@/components/player/PassivePlayerDialog";
 
+const profileTabs: SubNavItem[] = [
+  { id: "me", label: "Ich", icon: UserRound },
+  { id: "players", label: "Meine Spieler", icon: Users },
+  { id: "groups", label: "Meine Gruppen", icon: UsersRound },
+];
+
 export const Route = createFileRoute("/_authenticated/profile")({
+
   head: () => ({
     meta: [
       { title: "Profil — Birdie Battle" },
