@@ -72,7 +72,9 @@ function ProfilePage() {
     queryFn: () => fetchPassivePlayers(),
   });
 
+  const [tab, setTab] = useState("me");
   const [name, setName] = useState("");
+
   const [hcp, setHcp] = useState("-54,0");
   const [tee, setTee] = useState("Gelb");
   const [saving, setSaving] = useState(false);
