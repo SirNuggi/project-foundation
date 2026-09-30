@@ -131,7 +131,7 @@ function GroupPage() {
             </h1>
           </div>
           {/* Geänderter Container: Absolut oben rechts positioniert, Spalten-Layout mit Abstand */}
-          <div className="absolute right-6 top-6 flex flex-col items-center gap-1">
+          <div className="absolute right-6 top-5 flex flex-col items-center gap-1">
             {/* Schließen-Button oben */}
             <Link to="/profile" aria-label="Zurück zum Profil" className="flex h-10 w-10 items-center justify-center">
               <X className="h-6 w-6" />
