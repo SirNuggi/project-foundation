@@ -52,6 +52,12 @@ export const Route = createFileRoute("/_authenticated/groups/$groupId")({
 
 type Member = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>>["members"][number];
 
+const groupTabs: SubNavItem[] = [
+  { id: "members", label: "Mitglieder", icon: Users },
+  { id: "settings", label: "Einstellungen", icon: Settings },
+];
+
+
 function GroupPage() {
   const { groupId } = Route.useParams();
   const qc = useQueryClient();
@@ -59,7 +65,9 @@ function GroupPage() {
   const addMember = useServerFn(addGroupMember);
   const removeMember = useServerFn(removeGroupMember);
   const rename = useServerFn(renameGroup);
+  const [tab, setTab] = useState("members");
   const [addOpen, setAddOpen] = useState(false);
+
   const [toRemove, setToRemove] = useState<Member | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
