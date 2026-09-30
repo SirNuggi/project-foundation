@@ -158,55 +158,68 @@ function GroupPage() {
             </Link>
           </div>
         </div>
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            aria-label="Mitglied hinzufügen"
-            className="absolute -bottom-8 left-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95"
-          >
-            <Plus className="h-8 w-8" />
-          </button>
-        )}
       </header>
 
-      <section className={`${isAdmin ? "mt-14" : "mt-8"} px-6`}>
-        <p className="py-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-          Mitglieder{data ? ` (${data.members.length})` : ""}
-        </p>
-        <div className="mt-3 space-y-3">
-          {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
-          {data?.members.map((m) => {
-            const canRemove = isAdmin && m.userId !== data.createdBy && m.role !== "admin";
-            return (
-              <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{m.name}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-muted-foreground">HCP {m.handicapIndex.toFixed(1).replace(".", ",")}</span>
-                    <Badge variant={m.userType === "passive" ? "secondary" : "outline"}>
-                      {m.userType === "passive" ? "Passiv" : "Aktiv"}
-                    </Badge>
-                    <Badge variant={m.role === "admin" ? "default" : "outline"}>
-                      {m.role === "admin" ? "Admin" : "Mitglied"}
-                    </Badge>
+      <SubNavigation items={groupTabs} value={tab} onChange={setTab} />
+
+      <SlideViews index={Math.max(0, groupTabs.findIndex((t) => t.id === tab))}>
+        <section className="px-6 pt-8 pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black">
+                Mitglieder{data ? ` (${data.members.length})` : ""}
+              </h2>
+              <p className="text-sm text-muted-foreground">Mitglieder dieser Gruppe</p>
+            </div>
+            {isAdmin && (
+              <Button type="button" size="icon" aria-label="Mitglied hinzufügen" onClick={() => setAddOpen(true)}>
+                <Plus />
+              </Button>
+            )}
+          </div>
+          <div className="mt-5 space-y-3">
+            {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
+            {data?.members.map((m) => {
+              const canRemove = isAdmin && m.userId !== data.createdBy && m.role !== "admin";
+              return (
+                <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">{m.name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground">HCP {m.handicapIndex.toFixed(1).replace(".", ",")}</span>
+                      <Badge variant={m.userType === "passive" ? "secondary" : "outline"}>
+                        {m.userType === "passive" ? "Passiv" : "Aktiv"}
+                      </Badge>
+                      <Badge variant={m.role === "admin" ? "default" : "outline"}>
+                        {m.role === "admin" ? "Admin" : "Mitglied"}
+                      </Badge>
+                    </div>
                   </div>
+                  {canRemove && (
+                    <button
+                      type="button"
+                      onClick={() => setToRemove(m)}
+                      aria-label={`${m.name} entfernen`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-muted"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
-                {canRemove && (
-                  <button
-                    type="button"
-                    onClick={() => setToRemove(m)}
-                    aria-label={`${m.name} entfernen`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-muted"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="px-6 pt-8 pb-4">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 py-14 text-center">
+            <Settings className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <h2 className="mt-4 text-xl font-black">Einstellungen</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Folgt in Kürze.</p>
+          </div>
+        </section>
+      </SlideViews>
+
 
       <AddGroupMemberDialog
         open={addOpen}
