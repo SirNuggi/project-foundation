@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { MoreVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Settings, Trash2, Users, X } from "lucide-react";
+import { SubNavigation, SlideViews, type SubNavItem } from "@/components/SubNavigation";
+
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
