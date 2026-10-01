@@ -334,7 +334,7 @@ function GroupPage() {
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card className="border-none bg-background">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamteinnahmen</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt ausstehender Betrag</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
                     € {financialData?.totalOpenAmount.toFixed(2) ?? 0}
@@ -342,15 +342,15 @@ function GroupPage() {
                 </Card>
                 <Card className="border-none bg-background">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Ausstehend insgesamt</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtsumme offene Strafen</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
-                    € {financialData?.totalOpenAmount.toFixed(2) ?? 0}
+                    € {financialData?.totalOpenPenalties.toFixed(2) ?? 0}
                   </CardContent>
                 </Card>
                 <Card className="border-none bg-background">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Mitglieder mit offenen Beträgen</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Anzahl offener Mitgliedsbeiträge</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
                     {financialData?.openMembershipCount ?? 0}

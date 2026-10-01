@@ -104,16 +104,14 @@ export function MemberFinancialCard({
               </span>
             </div>
           </div>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => setHistoryOpen(true)}
-            >
-              {canViewHistory ? "Kontoauszug" : "Verlauf anzeigen"}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setHistoryOpen(true)}
+          >
+            Kontoauszug
+          </Button>
         </CardContent>
       </Card>
 

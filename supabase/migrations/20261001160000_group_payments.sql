@@ -7,7 +7,7 @@ CREATE TABLE public.group_payments (
   type text NOT NULL CHECK (type IN ('penalty', 'membership_fee')),
   note text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL
+  created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.group_payments TO authenticated;
