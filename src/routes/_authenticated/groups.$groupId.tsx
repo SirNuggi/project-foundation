@@ -363,15 +363,15 @@ function GroupPage() {
               <h2 className="text-xl font-black mb-6">Mitglieder</h2>
               <div className="space-y-4">
                 {financialData?.members.map((member) => (
-                  <MemberFinancialCard
-                    key={member.userId}
-                    member={member}
-                    groupId={groupId}
-                    isAdmin={isAdmin}
-                    currentUserId={data?.myUserId ?? ""}
-                    membershipFee={data?.membershipFee ?? 0}
-                  />
-                )) ?? []}
+                                  <MemberFinancialCard
+                                    key={member.userId}
+                                    member={member}
+                                    groupId={groupId}
+                                    isAdmin={isAdmin}
+                                    currentUserId={currentUserId ?? ""}
+                                    membershipFee={data?.membershipFee ?? 0}
+                                  />
+                                )) ?? []}
               </div>
             </section>
           </>

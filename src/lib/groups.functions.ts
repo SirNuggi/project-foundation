@@ -446,11 +446,11 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
         roundName: (p.rounds as any)?.name ?? null,
         roundDate: (p.rounds as any)?.played_on ?? null,
       })),
-      payments: (payments ?? []).map((p) => ({
-        amount: Number(p.amount ?? 0),
-        type: p.type,
-        note: p.note,
-        date: p.created_at,
-      })),
+      payments: (payments ?? []).map((p: any) => ({
+                    amount: Number(p.amount ?? 0),
+                    type: p.type,
+                    note: p.note,
+                    date: p.created_at,
+                  })),
     };
   });
