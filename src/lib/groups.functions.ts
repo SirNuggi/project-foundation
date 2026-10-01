@@ -406,42 +406,6 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
     };
   });
 
-export const recordGroupPayment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z
-      .object({
-        groupId: z.string().uuid(),
-        userId: z.string().uuid(),
-        amount: z.number().min(0.01).max(9999.99),
-        type: z.enum(["penalty", "membership_fee"]),
-        note: z.string().max(200).optional(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase;
-
-    // Prüfen ob Admin
-    const { data: isAdmin } = await sb.rpc("is_group_admin", {
-      _group_id: data.groupId,
-      _user_id: context.userId,
-    });
-    if (!isAdmin) throw new Error("Nur Gruppen-Admins können Zahlungen verbuchen");
-
-    const { error } = await sb.from("group_payments").insert({
-      group_id: data.groupId,
-      user_id: data.userId,
-      amount: Math.round(data.amount * 100) / 100,
-      type: data.type,
-      note: data.note ?? null,
-      created_by: context.userId,
-    });
-    if (error) throw new Error(error.message);
-
-    return { ok: true };
-  });
-
 export const getMemberPaymentHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ groupId: z.string().uuid(), userId: z.string().uuid() }).parse(d))
