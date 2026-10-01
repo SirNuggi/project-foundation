@@ -1019,31 +1019,6 @@ function NewRound() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-4">
-          <div className="pr-4">
-            <Label htmlFor="with-penalties" className="text-base font-black">
-              Mit Strafkasse spielen
-            </Label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Aus: keine Strafen-Chips, kein Geld — nur Schläge, Putts und Stableford.
-            </p>
-          </div>
-          <div className="flex items-center">
-            <Switch
-              id="with-penalties"
-              checked={withPenalties}
-              onCheckedChange={setWithPenalties}
-              disabled={!penaltyFundAvailable}
-              aria-disabled={!penaltyFundAvailable}
-            />
-            {penaltyFundAvailable ? null : (
-              <span className="ml-3 text-xs text-muted-foreground">
-                {penaltyFundHint}
-              </span>
-            )}
-          </div>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="group-select">Gruppe</Label>
           <Select
@@ -1063,6 +1038,24 @@ function NewRound() {
             </SelectContent>
           </Select>
         </div>
+
+        {penaltyFundAvailable && (
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-4">
+            <div className="pr-4">
+              <Label htmlFor="with-penalties" className="text-base font-black">
+                Mit Strafkasse spielen
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aus: keine Strafen-Chips, kein Geld — nur Schläge, Putts und Stableford.
+              </p>
+            </div>
+            <Switch
+              id="with-penalties"
+              checked={withPenalties}
+              onCheckedChange={setWithPenalties}
+            />
+          </div>
+        )}
 
         <div className="space-y-4">
           {flights.map((f, i) => (
