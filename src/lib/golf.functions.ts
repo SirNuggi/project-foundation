@@ -492,7 +492,7 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!round) return null;
 
-    const [holes, scores, penalties, rules] = await Promise.all([
+    const [holes, scores, penalties, globalRules, groupRules, group] = await Promise.all([
       round.course_id
         ? sb
             .from("course_holes")
@@ -515,6 +515,17 @@ export const getRoundBoard = createServerFn({ method: "GET" })
         .select("id, round_player_id, hole_number, code, points, amount")
         .eq("round_id", data.roundId),
       sb.from("penalty_rules").select("code, label, points, amount, is_automatic"),
+      round.group_id
+        ? sb
+            .from("group_penalty_rules")
+            .select("code, label, amount, is_automatic")
+            .eq("group_id", round.group_id)
+        : Promise.resolve({
+            data: [] as { code: string; label: string; amount: number; is_automatic: boolean }[],
+          }),
+      round.group_id
+        ? sb.from("groups").select("id, has_penalty_fund").eq("id", round.group_id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     const courseRows = holes.data ?? [];
@@ -559,6 +570,12 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     const canDeleteMyFlight =
       !!myFlightId && (isCreator || (myFlightRow?.created_by ?? null) === context.userId);
 
+    // Nutze Gruppen-Strafregeln, falls die Gruppe eine aktive Strafkasse hat
+    const effectiveRules =
+      group.data?.has_penalty_fund && groupRules.data.length > 0
+        ? groupRules.data.map((r) => ({ ...r, points: 1 }))
+        : (globalRules.data ?? []);
+
     return {
       id: round.id,
       roundName: round.name ?? null,
@@ -581,7 +598,7 @@ export const getRoundBoard = createServerFn({ method: "GET" })
       players,
       scores: scores.data ?? [],
       penalties: penalties.data ?? [],
-      rules: rules.data ?? [],
+      rules: effectiveRules,
     };
   });
 
@@ -681,12 +698,22 @@ async function syncAutoPenalties(
 ) {
   const penaltyGroupId = await resolvePenaltyGroupId(sb, args.roundId, args.roundPlayerId);
 
+  // Lade Gruppen-Strafregeln, falls die Runde einer Gruppe zugeordnet ist
+  let { data: groupRules } = await sb
+    .from("group_penalty_rules")
+    .select("code, label, amount, is_automatic")
+    .eq("group_id", penaltyGroupId);
+
   const { data: rules } = await sb
     .from("penalty_rules")
     .select("code, points, amount")
     .in("code", ["double_par", "three_putt"]);
+
+  // Wenn Gruppenregeln vorhanden sind, nutze diese; sonst die globalen Regeln
+  const effectiveRules = groupRules && groupRules.length > 0 ? groupRules : rules;
+
   const ruleFor = (code: string) =>
-    (rules ?? []).find((r: { code: string }) => r.code === code) as
+    (effectiveRules ?? []).find((r: { code: string }) => r.code === code) as
       | { code: string; points: number; amount: number }
       | undefined;
   const pointsFor = (code: string) => ruleFor(code)?.points ?? 1;
