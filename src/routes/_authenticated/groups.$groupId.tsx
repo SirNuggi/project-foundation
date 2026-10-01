@@ -24,7 +24,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddGroupMemberDialog } from "@/components/group/AddGroupMemberDialog";
-import { addGroupMember, getGroupDetail, removeGroupMember, renameGroup, updateGroupFund } from "@/lib/groups.functions";
+import { MemberFinancialCard } from "@/components/group/MemberFinancialCard";
+import {
+  addGroupMember,
+  getGroupDetail,
+  getGroupFinancialOverview,
+  removeGroupMember,
+  renameGroup,
+  updateGroupFund,
+} from "@/lib/groups.functions";
 
 export const Route = createFileRoute("/_authenticated/groups/$groupId")({
   head: () => ({
@@ -64,10 +72,23 @@ function GroupPage() {
   const [loaded, setLoaded] = useState(false);
   const key = ["group", groupId];
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => fetchGroup({ data: { groupId } }) });
-  const isAdmin = data?.myRole === "admin";
+    const { data: financialData, isLoading: financialLoading } = useQuery({
+      queryKey: ["group-financial", groupId],
+      queryFn: () => fetchFinancialOverview({ data: { groupId } }),
+      enabled: hasFund,
+    });
+    const isAdmin = data?.myRole === "admin";
   const updateFund = useServerFn(updateGroupFund);
+  const fetchFinancialOverview = useServerFn(getGroupFinancialOverview);
+  const recordPayment = useServerFn(recordGroupPayment);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [fee, setFee] = useState("0,00");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentMember, setPaymentMember] = useState<FinancialMember | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentType, setPaymentType] = useState<"penalty" | "membership_fee">("penalty");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const hasFund = !!data?.hasPenaltyFund;
   const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
 
@@ -112,9 +133,10 @@ function GroupPage() {
   }, [data, loaded]);
 
   async function refresh() {
-    await qc.invalidateQueries({ queryKey: key });
-    await qc.invalidateQueries({ queryKey: ["my-groups"] });
-  }
+      await qc.invalidateQueries({ queryKey: key });
+      await qc.invalidateQueries({ queryKey: ["my-groups"] });
+      await qc.invalidateQueries({ queryKey: ["group-financial", groupId] });
+    }
 
   async function handleAdd(profileId: string) {
     try {
