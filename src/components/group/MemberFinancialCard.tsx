@@ -293,101 +293,11 @@ export function MemberFinancialCard({
             </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 max-h-[calc(90vh-14rem)] px-5 py-4">
+          <div className="flex-1 overflow-y-auto max-h-[calc(90vh-14rem)] px-5 py-4">
             <div className="space-y-6">
-              {/* 1. Historische Strafen */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold flex items-center gap-1.5">
-                    <Receipt className="h-4 w-4 text-muted-foreground" />
-                    Runden-Strafen
-                  </h3>
-                  <span className="text-xs text-muted-foreground">
-                    Offen: {formatCurrency(member.openPenalties)}
-                  </span>
-                </div>
-
-                {historyLoading ? (
-                  <p className="text-xs text-muted-foreground py-2">Lade Historie…</p>
-                ) : history?.penalties && history.penalties.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {history.penalties.map((p, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-muted/40 border border-border/50"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-bold truncate">{p.label}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {p.roundName || "Runde"} • {formatDate(p.roundDate || p.date)}
-                          </p>
-                        </div>
-                        <span className="font-bold text-destructive shrink-0">
-                          - {formatCurrency(p.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">
-                    Keine Runden-Strafen für dieses Mitglied erfasst.
-                  </div>
-                )}
-              </div>
-
-              {/* 2. Eingetragene Zahlungen */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold flex items-center gap-1.5">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    Bisherige Zahlungen
-                  </h3>
-                  <span className="text-xs text-muted-foreground">
-                    Summe: {formatCurrency(member.paidPenalties + member.paidMembershipFee)}
-                  </span>
-                </div>
-
-                {historyLoading ? (
-                  <p className="text-xs text-muted-foreground py-2">Lade Zahlungen…</p>
-                ) : history?.payments && history.payments.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {history.payments.map((p, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="flex items-center gap-1.5">
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] py-0 px-1 border-emerald-600/40 text-emerald-700 dark:text-emerald-300 font-semibold"
-                            >
-                              {p.type === "penalty" ? "Strafen" : "Mitgliedsbeitrag"}
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground">{formatDate(p.date)}</span>
-                          </div>
-                          {p.note && (
-                            <p className="text-[11px] text-foreground mt-0.5 truncate font-medium">
-                              {p.note}
-                            </p>
-                          )}
-                        </div>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                          + {formatCurrency(p.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">
-                    Bisher wurden keine Zahlungen für dieses Mitglied erfasst.
-                  </div>
-                )}
-              </div>
-
-              {/* 3. Zahlung verbuchen (Nur für Gruppen-Admins) */}
+              {/* 1. Zahlung verbuchen (Nur für Gruppen-Admins) */}
               {isAdmin && (
-                <div className="border-t pt-4">
+                <div>
                   <h3 className="text-sm font-bold flex items-center gap-1.5 mb-3">
                     <PlusCircle className="h-4 w-4 text-primary" />
                     Zahlung verbuchen
@@ -490,8 +400,98 @@ export function MemberFinancialCard({
                   </form>
                 </div>
               )}
+
+              {/* 2. Historische Strafen */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-bold flex items-center gap-1.5">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    Runden-Strafen
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    Offen: {formatCurrency(member.openPenalties)}
+                  </span>
+                </div>
+
+                {historyLoading ? (
+                  <p className="text-xs text-muted-foreground py-2">Lade Historie…</p>
+                ) : history?.penalties && history.penalties.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {history.penalties.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-muted/40 border border-border/50"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold truncate">{p.label}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {p.roundName || "Runde"} • {formatDate(p.roundDate || p.date)}
+                          </p>
+                        </div>
+                        <span className="font-bold text-destructive shrink-0">
+                          - {formatCurrency(p.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">
+                    Keine Runden-Strafen für dieses Mitglied erfasst.
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Eingetragene Zahlungen */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-bold flex items-center gap-1.5">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    Bisherige Zahlungen
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    Summe: {formatCurrency(member.paidPenalties + member.paidMembershipFee)}
+                  </span>
+                </div>
+
+                {historyLoading ? (
+                  <p className="text-xs text-muted-foreground py-2">Lade Zahlungen…</p>
+                ) : history?.payments && history.payments.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {history.payments.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] py-0 px-1 border-emerald-600/40 text-emerald-700 dark:text-emerald-300 font-semibold"
+                            >
+                              {p.type === "penalty" ? "Strafen" : "Mitgliedsbeitrag"}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">{formatDate(p.date)}</span>
+                          </div>
+                          {p.note && (
+                            <p className="text-[11px] text-foreground mt-0.5 truncate font-medium">
+                              {p.note}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                          + {formatCurrency(p.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">
+                    Bisher wurden keine Zahlungen für dieses Mitglied erfasst.
+                  </div>
+                )}
+              </div>
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </>
