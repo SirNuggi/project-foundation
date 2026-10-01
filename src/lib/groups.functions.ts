@@ -206,7 +206,7 @@ export const recordGroupPayment = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Nur Gruppen-Admins können Zahlungen verbuchen");
 
-    const { error } = await sb.from("group_payments").insert({
+    const { error } = await (sb as any).from("group_payments").insert({
       group_id: data.groupId,
       user_id: data.userId,
       amount: Math.round(data.amount * 100) / 100,
@@ -346,7 +346,7 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
     if (penaltiesError) throw new Error(penaltiesError.message);
 
     // 4. Alle Zahlungen aus group_payments laden
-    const { data: payments, error: paymentsError } = await sb
+    const { data: payments, error: paymentsError } = await (sb as any)
       .from("group_payments")
       .select("user_id, amount, type")
       .eq("group_id", data.groupId);

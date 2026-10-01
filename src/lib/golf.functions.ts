@@ -572,7 +572,7 @@ export const getRoundBoard = createServerFn({ method: "GET" })
 
     // Nutze Gruppen-Strafregeln, falls die Gruppe eine aktive Strafkasse hat
     const effectiveRules =
-      group.data?.has_penalty_fund && groupRules.data.length > 0
+      group.data?.has_penalty_fund && groupRules.data && groupRules.data.length > 0
         ? groupRules.data.map((r) => ({ ...r, points: 1 }))
         : (globalRules.data ?? []);
 

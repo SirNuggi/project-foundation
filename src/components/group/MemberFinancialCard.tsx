@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useQuery, useState } from "react";
 import { type MemberFinancials, type GroupFinancialOverview, recordGroupPayment, getMemberPaymentHistory } from "@/lib/groups.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
@@ -91,7 +91,7 @@ export function MemberFinancialCard({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Mitgliedsbeitrag</span>
-            <Badge variant={member.membershipFeeStatus === "paid" ? "success" : "destructive"}>
+            <Badge variant={member.membershipFeeStatus === "paid" ? "default" : "destructive"}>
               {member.membershipFeeStatus === "paid" ? "Bezahlt" : `Offen € ${member.membershipFee.toFixed(2)}`}
             </Badge>
           </div>
@@ -132,37 +132,37 @@ export function MemberFinancialCard({
               <div>
                 <h3 className="text-sm font-bold mb-2">Historische Strafen</h3>
                 {history?.penalties && history.penalties.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {history.penalties.map((p, i) => (
-                      <div key={i} className="flex justify-between text-sm py-2 border-b">
-                        <span>{p.code} — {p.roundName || "Runde"}</span>
-                        <span className="text-destructive">€ {p.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Keine Strafen verzeichnet.</p>
-                )}
+                                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                                    {history.penalties.map((p: { code: string; roundName: string | null; amount: number }, i: number) => (
+                                      <div key={i} className="flex justify-between text-sm py-2 border-b">
+                                        <span>{p.code} — {p.roundName || "Runde"}</span>
+                                        <span className="text-destructive">€ {p.amount.toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">Keine Strafen verzeichnet.</p>
+                                )}
               </div>
 
               {/* Zahlungen */}
               <div>
                 <h3 className="text-sm font-bold mb-2">Eingetragene Zahlungen</h3>
                 {history?.payments && history.payments.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {history.payments.map((p, i) => (
-                      <div key={i} className="flex justify-between text-sm py-2 border-b">
-                        <span>
-                          {p.type === "penalty" ? "Strafen" : "Mitgliedsbeitrag"}
-                          {p.note && ` — ${p.note}`}
-                        </span>
-                        <span className="text-success">€ {p.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Keine Zahlungen verbucht.</p>
-                )}
+                                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                                    {history.payments.map((p: { type: string; note: string | null; amount: number }, i: number) => (
+                                      <div key={i} className="flex justify-between text-sm py-2 border-b">
+                                        <span>
+                                          {p.type === "penalty" ? "Strafen" : "Mitgliedsbeitrag"}
+                                          {p.note && ` — ${p.note}`}
+                                        </span>
+                                        <span className="text-success">€ {p.amount.toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">Keine Zahlungen verbucht.</p>
+                                )}
               </div>
 
               {/* Zahlung verbuchen */}
