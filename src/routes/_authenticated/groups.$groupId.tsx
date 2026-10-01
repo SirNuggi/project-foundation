@@ -69,7 +69,7 @@ function GroupPage() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [fee, setFee] = useState("0,00");
   const hasFund = !!data?.hasPenaltyFund;
-  const groupTabs = hasFund ? [baseTabs[0], fundTab, baseTabs[1]] : baseTabs;
+  const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
 
   useEffect(() => {
     if (data) setFee(data.membershipFee.toFixed(2).replace(".", ","));
@@ -230,14 +230,6 @@ function GroupPage() {
           </div>
         </section>
 
-        {...(hasFund
-          ? [
-              <section key="fund" className="px-6 pt-8 pb-4">
-                <h2 className="text-xl font-black">Kasse</h2>
-                <p className="mt-4 text-sm text-muted-foreground">Keine Einträge in der Kasse.</p>
-              </section>,
-            ]
-          : [])}
         <section className="px-6 pt-8 pb-4">
           <h2 className="text-xl font-black">Einstellungen</h2>
           <p className="mt-1 text-sm text-muted-foreground">Gruppeneinstellungen verwalten</p>
@@ -311,6 +303,12 @@ function GroupPage() {
             </div>
           )}
         </section>
+        {hasFund ? (
+          <section className="px-6 pt-8 pb-4">
+            <h2 className="text-xl font-black">Kasse</h2>
+            <p className="mt-4 text-sm text-muted-foreground">Keine Einträge in der Kasse.</p>
+          </section>
+        ) : null}
       </SlideViews>
 
       <GroupPenaltyRulesDialog open={rulesOpen} onOpenChange={setRulesOpen} groupId={groupId} />
