@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Coins, Info, Plus, Settings, Trash2, Users, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GroupPenaltyRulesDialog } from "@/components/group/GroupPenaltyRulesDialog";
 import { SubNavigation, SlideViews, type SubNavItem } from "@/components/SubNavigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,9 @@ function GroupPage() {
   const removeMember = useServerFn(removeGroupMember);
   const rename = useServerFn(renameGroup);
   const [tab, setTab] = useState("members");
-  const [addOpen, setAddOpen] = useState(false);
+    const [addOpen, setAddOpen] = useState(false);
+    const [rulesOpen, setRulesOpen] = useState(false);
+    const [fee, setFee] = useState("");
 
   const [toRemove, setToRemove] = useState<Member | null>(null);
   const [groupName, setGroupName] = useState("");
@@ -77,6 +80,13 @@ function GroupPage() {
   const fetchFinancialOverview = useServerFn(getGroupFinancialOverview);
   const hasFund = !!data?.hasPenaltyFund;
   const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
+  
+  // Compute current user ID from members list based on myRole
+  const currentUserId = useMemo(() => {
+    if (!data?.members || !data?.myRole) return "";
+    const member = data.members.find(m => m.role === data.myRole);
+    return member ? member.userId : "";
+  }, [data?.members, data?.myRole]);
 
   const { data: financialData, isLoading: financialLoading } = useQuery({
     queryKey: ["group-financial", groupId],
@@ -327,7 +337,7 @@ function GroupPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Gesamteinnahmen</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
-                    € {financialData?.totalIncome.toFixed(2) ?? 0}
+                    € {financialData?.totalOpenAmount.toFixed(2) ?? 0}
                   </CardContent>
                 </Card>
                 <Card className="border-none bg-background">
@@ -335,7 +345,7 @@ function GroupPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Ausstehend insgesamt</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
-                    € {financialData?.totalOutstanding.toFixed(2) ?? 0}
+                    € {financialData?.totalOpenAmount.toFixed(2) ?? 0}
                   </CardContent>
                 </Card>
                 <Card className="border-none bg-background">
@@ -343,7 +353,7 @@ function GroupPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Mitglieder mit offenen Beträgen</CardTitle>
                   </CardHeader>
                   <CardContent className="text-2xl font-bold">
-                    {financialData?.membersWithOutstanding ?? 0}
+                    {financialData?.openMembershipCount ?? 0}
                   </CardContent>
                 </Card>
               </div>
