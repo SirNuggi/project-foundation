@@ -2,7 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Plus, Settings, Trash2, Users, X } from "lucide-react";
+import { Coins, Info, Plus, Settings, Trash2, Users, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { GroupPenaltyRulesDialog } from "@/components/group/GroupPenaltyRulesDialog";
 import { SubNavigation, SlideViews, type SubNavItem } from "@/components/SubNavigation";
 
 import { toast } from "sonner";
@@ -21,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddGroupMemberDialog } from "@/components/group/AddGroupMemberDialog";
-import { addGroupMember, getGroupDetail, removeGroupMember, renameGroup } from "@/lib/groups.functions";
+import { addGroupMember, getGroupDetail, removeGroupMember, renameGroup, updateGroupFund } from "@/lib/groups.functions";
 
 export const Route = createFileRoute("/_authenticated/groups/$groupId")({
   head: () => ({
@@ -39,10 +42,11 @@ export const Route = createFileRoute("/_authenticated/groups/$groupId")({
 
 type Member = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>>["members"][number];
 
-const groupTabs: SubNavItem[] = [
+const baseTabs: SubNavItem[] = [
   { id: "members", label: "Mitglieder", icon: Users },
   { id: "settings", label: "Einstellungen", icon: Settings },
 ];
+const fundTab: SubNavItem = { id: "fund", label: "Kasse", icon: Coins };
 
 function GroupPage() {
   const { groupId } = Route.useParams();
@@ -61,6 +65,45 @@ function GroupPage() {
   const key = ["group", groupId];
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => fetchGroup({ data: { groupId } }) });
   const isAdmin = data?.myRole === "admin";
+  const updateFund = useServerFn(updateGroupFund);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [fee, setFee] = useState("0,00");
+  const hasFund = !!data?.hasPenaltyFund;
+  const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
+
+  useEffect(() => {
+    if (data) setFee(data.membershipFee.toFixed(2).replace(".", ","));
+  }, [data?.membershipFee]);
+
+  useEffect(() => {
+    if (!hasFund && tab === "fund") setTab("settings");
+  }, [hasFund, tab]);
+
+  async function toggleFund(v: boolean) {
+    qc.setQueryData(key, (old: typeof data) => (old ? { ...old, hasPenaltyFund: v } : old));
+    try {
+      await updateFund({ data: { groupId, hasPenaltyFund: v } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Fehler beim Speichern");
+    }
+    await refresh();
+  }
+
+  async function saveFee() {
+    const n = Number(fee.trim().replace(",", "."));
+    if (!Number.isFinite(n) || n < 0 || n > 9999.99) {
+      toast.error("Ungültiger Betrag");
+      return;
+    }
+    if (data && Math.abs(n - data.membershipFee) < 0.001) return;
+    try {
+      await updateFund({ data: { groupId, membershipFee: n } });
+      await refresh();
+      toast.success("Mitgliedsbeitrag gespeichert");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Fehler beim Speichern");
+    }
+  }
 
   useEffect(() => {
     if (!data?.name || loaded) return;
@@ -216,8 +259,59 @@ function GroupPage() {
               <p className="text-base font-bold">{data?.name ?? "—"}</p>
             </div>
           )}
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="penalty-fund" className="text-base font-bold">
+                Mit Strafkasse spielen
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" aria-label="Info zur Strafkasse" className="text-primary">
+                    <Info className="h-5 w-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 text-sm">
+                  Aktiviert die Strafkasse für Runden dieser Gruppe. Es können Mitgliedsbeiträge und individuelle
+                  Strafen hinterlegt werden.
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Switch id="penalty-fund" checked={hasFund} disabled={!isAdmin} onCheckedChange={toggleFund} />
+          </div>
+          {hasFund && (
+            <div className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="membership-fee">Mitgliedsbeitrag (€)</Label>
+                <div className="relative">
+                  <Input
+                    id="membership-fee"
+                    inputMode="decimal"
+                    value={fee}
+                    disabled={!isAdmin}
+                    onChange={(e) => setFee(e.target.value)}
+                    onBlur={saveFee}
+                    className="h-13 pr-9"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                </div>
+              </div>
+              {isAdmin && (
+                <Button type="button" variant="outline" className="h-14 w-full text-base font-bold" onClick={() => setRulesOpen(true)}>
+                  Strafen festlegen
+                </Button>
+              )}
+            </div>
+          )}
         </section>
+        {hasFund ? (
+          <section className="px-6 pt-8 pb-4">
+            <h2 className="text-xl font-black">Kasse</h2>
+            <p className="mt-4 text-sm text-muted-foreground">Keine Einträge in der Kasse.</p>
+          </section>
+        ) : null}
       </SlideViews>
+
+      <GroupPenaltyRulesDialog open={rulesOpen} onOpenChange={setRulesOpen} groupId={groupId} />
 
       <AddGroupMemberDialog
         open={addOpen}

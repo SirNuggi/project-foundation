@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/stats")({
   errorComponent: ({ error }) => (
     <main role="alert" className="min-h-screen bg-background px-6 py-10">
       <p className="font-bold">Statistiken konnten nicht geladen werden.</p>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
       <Link to="/dashboard" className="mt-6 inline-block text-sm font-semibold text-primary">
         ← Dashboard
       </Link>

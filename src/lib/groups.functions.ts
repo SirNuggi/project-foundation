@@ -90,7 +90,7 @@ export const getGroupDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: group, error } = await context.supabase
       .from("groups")
-      .select("id, name, created_by")
+      .select("id, name, created_by, has_penalty_fund, membership_fee")
       .eq("id", data.groupId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -113,7 +113,7 @@ export const getGroupDetail = createServerFn({ method: "GET" })
     });
     members.sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name, "de") : a.role === "admin" ? -1 : 1));
     const myRole = members.find((m) => m.userId === context.userId)?.role ?? null;
-    return { id: group.id, name: group.name, createdBy: group.created_by, myRole, members };
+    return { id: group.id, name: group.name, createdBy: group.created_by, hasPenaltyFund: !!group.has_penalty_fund, membershipFee: Number(group.membership_fee ?? 0), myRole, members };
   });
 
 export const addGroupMember = createServerFn({ method: "POST" })
@@ -153,5 +153,104 @@ export const removeGroupMember = createServerFn({ method: "POST" })
       .select("id");
     if (error) throw new Error(error.message);
     if (!del?.length) throw new Error("Keine Berechtigung");
+    return { ok: true };
+  });
+
+export const updateGroupFund = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        groupId: z.string().uuid(),
+        hasPenaltyFund: z.boolean().optional(),
+        membershipFee: z.number().min(0).max(9999.99).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: { has_penalty_fund?: boolean; membership_fee?: number } = {};
+    if (data.hasPenaltyFund !== undefined) patch.has_penalty_fund = data.hasPenaltyFund;
+    if (data.membershipFee !== undefined) patch.membership_fee = Math.round(data.membershipFee * 100) / 100;
+    const { data: row, error } = await context.supabase
+      .from("groups")
+      .update(patch)
+      .eq("id", data.groupId)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Nur Gruppen-Admins können das ändern");
+    return { ok: true };
+  });
+
+export const DEFAULT_GROUP_RULES = [
+  { code: "double_par", label: "Doppel-Par", amount: 0.5, is_automatic: true },
+  { code: "three_putt", label: "3-Putt", amount: 0.5, is_automatic: true },
+];
+
+export const getGroupPenaltyRules = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ groupId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("group_penalty_rules")
+      .select("id, code, label, amount, is_automatic")
+      .eq("group_id", data.groupId)
+      .order("created_at");
+    if (error) throw new Error(error.message);
+    const list = (rows ?? []).map((r) => ({ ...r, amount: Number(r.amount) }));
+    for (const d of DEFAULT_GROUP_RULES) {
+      if (!list.some((r) => r.code === d.code)) list.unshift({ id: "", ...d });
+    }
+    return list;
+  });
+
+export const saveGroupPenaltyRules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        groupId: z.string().uuid(),
+        rules: z
+          .array(
+            z.object({
+              code: z.string().trim().min(1).max(60),
+              label: z.string().trim().min(1).max(50),
+              amount: z.number().min(0).max(9999.99),
+              is_automatic: z.boolean(),
+            }),
+          )
+          .max(50),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_group_admin", {
+      _group_id: data.groupId,
+      _user_id: context.userId,
+    });
+    if (!isAdmin) throw new Error("Nur Gruppen-Admins können Strafen festlegen");
+    const codes = data.rules.map((r) => r.code);
+    if (new Set(codes).size !== codes.length) throw new Error("Strafnamen müssen eindeutig sein");
+    const { data: existing, error: e1 } = await context.supabase
+      .from("group_penalty_rules")
+      .select("code")
+      .eq("group_id", data.groupId);
+    if (e1) throw new Error(e1.message);
+    const toDelete = (existing ?? []).map((r) => r.code).filter((c) => !codes.includes(c));
+    if (toDelete.length) {
+      const { error } = await context.supabase
+        .from("group_penalty_rules")
+        .delete()
+        .eq("group_id", data.groupId)
+        .in("code", toDelete);
+      if (error) throw new Error(error.message);
+    }
+    if (data.rules.length) {
+      const { error } = await context.supabase.from("group_penalty_rules").upsert(
+        data.rules.map((r) => ({ ...r, amount: Math.round(r.amount * 100) / 100, group_id: data.groupId })),
+        { onConflict: "group_id,code" },
+      );
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });

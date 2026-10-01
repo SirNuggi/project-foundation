@@ -213,23 +213,67 @@ export type Database = {
           },
         ]
       }
+      group_penalty_rules: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string
+          group_id: string
+          id: string
+          is_automatic: boolean
+          label: string
+        }
+        Insert: {
+          amount?: number
+          code: string
+          created_at?: string
+          group_id: string
+          id?: string
+          is_automatic?: boolean
+          label: string
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_automatic?: boolean
+          label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_penalty_rules_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
           created_by: string | null
+          has_penalty_fund: boolean
           id: string
+          membership_fee: number
           name: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          has_penalty_fund?: boolean
           id?: string
+          membership_fee?: number
           name: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          has_penalty_fund?: boolean
           id?: string
+          membership_fee?: number
           name?: string
         }
         Relationships: [
