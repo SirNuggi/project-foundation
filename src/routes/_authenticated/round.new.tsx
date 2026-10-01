@@ -629,15 +629,42 @@ function NewRound() {
   const [myHandicap, setMyHandicap] = useState<number | null>(null);
   const [flights, setFlights] = useState<FlightDraft[]>([{ key: "f1", players: [] }]);
   const [saving, setSaving] = useState(false);
+  const [penaltyFundAvailable, setPenaltyFundAvailable] = useState(false);
+  const [penaltyFundHint, setPenaltyFundHint] = useState("");
 
   const { data: courses } = useQuery({ queryKey: ["courses"], queryFn: () => fetchCourses() });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
   const { data: groups } = useQuery({ queryKey: ["my-groups"], queryFn: () => fetchMyGroups() });
   const { data: selectedGroupDetail } = useQuery({
-    queryKey: ["group-detail", groupId],
-    queryFn: () => (groupId ? fetchGroupDetail({ data: { groupId } }) : null),
-    enabled: !!groupId,
-  });
+      queryKey: ["group-detail", groupId],
+      queryFn: () => (groupId ? fetchGroupDetail({ data: { groupId } }) : null),
+      enabled: !!groupId,
+    });
+  
+    // Prüfe, ob die ausgewählte Gruppe eine aktive Strafkasse hat
+    useEffect(() => {
+      async function loadPenaltyFundStatus() {
+        if (!groupId) {
+          setPenaltyFundAvailable(false);
+          setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
+          return;
+        }
+        try {
+          const groupData = await fetchGroupDetail({ data: { groupId } });
+          const hasPenaltyFund = groupData?.hasPenaltyFund ?? false;
+          setPenaltyFundAvailable(hasPenaltyFund);
+          if (!hasPenaltyFund) {
+            setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
+          } else {
+            setPenaltyFundHint("");
+          }
+        } catch (e) {
+          setPenaltyFundAvailable(false);
+          setPenaltyFundHint("Fehler beim Laden der Gruppen-Informationen.");
+        }
+      }
+      loadPenaltyFundStatus();
+    }, [groupId, fetchGroupDetail]);
 
   const takenProfileIds = [
     ...(me?.profile?.id ? [me.profile.id] : []),
@@ -1001,7 +1028,20 @@ function NewRound() {
               Aus: keine Strafen-Chips, kein Geld — nur Schläge, Putts und Stableford.
             </p>
           </div>
-          <Switch id="with-penalties" checked={withPenalties} onCheckedChange={setWithPenalties} />
+          <div className="flex items-center">
+            <Switch
+              id="with-penalties"
+              checked={withPenalties}
+              onCheckedChange={setWithPenalties}
+              disabled={!penaltyFundAvailable}
+              aria-disabled={!penaltyFundAvailable}
+            />
+            {penaltyFundAvailable ? null : (
+              <span className="ml-3 text-xs text-muted-foreground">
+                {penaltyFundHint}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">
