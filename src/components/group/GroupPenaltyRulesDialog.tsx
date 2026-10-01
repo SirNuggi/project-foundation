@@ -162,7 +162,7 @@ export function GroupPenaltyRulesDialog({
             Abbrechen
           </Button>
           <Button type="button" disabled={busy || !data} onClick={handleSave}>
-            {busy ? "Speichere…" : "Strafregeln speichern"}
+            {busy ? "Speichere…" : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>
