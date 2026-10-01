@@ -33,6 +33,7 @@ import {
   removeGroupMember,
   renameGroup,
   updateGroupFund,
+  type MemberFinancials,
 } from "@/lib/groups.functions";
 
 export const Route = createFileRoute("/_authenticated/groups/$groupId")({
@@ -181,6 +182,41 @@ function GroupPage() {
       setRenaming(false);
     }
   }
+
+  // Fallback Mitglieder-Liste aus Basis-Daten
+  const fallbackMembers: MemberFinancials[] = (data?.members ?? []).map((m) => {
+    const memFee = data?.membershipFee ?? 0;
+    return {
+      userId: m.userId,
+      name: m.name,
+      avatarUrl: m.avatarUrl ?? null,
+      role: m.role,
+      totalPenalties: 0,
+      paidPenalties: 0,
+      openPenalties: 0,
+      membershipFee: memFee,
+      paidMembershipFee: 0,
+      membershipFeeStatus: memFee > 0 ? "open" : "paid",
+      totalOpen: memFee,
+    };
+  });
+
+  const displayedMembers =
+    financialData?.members && financialData.members.length > 0
+      ? financialData.members
+      : fallbackMembers;
+
+  const totalOpenAmount =
+    financialData?.totalOpenAmount ??
+    displayedMembers.reduce((sum, m) => sum + m.totalOpen, 0);
+
+  const totalOpenPenalties =
+    financialData?.totalOpenPenalties ??
+    displayedMembers.reduce((sum, m) => sum + m.openPenalties, 0);
+
+  const openMembershipCount =
+    financialData?.openMembershipCount ??
+    displayedMembers.filter((m) => m.membershipFee > 0 && m.membershipFeeStatus === "open").length;
 
   return (
     <main className="min-h-screen bg-background pb-16">
@@ -356,7 +392,7 @@ function GroupPage() {
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="text-2xl font-black tracking-tight text-destructive">
-                    {financialLoading ? "…" : formatCurrency(financialData?.totalOpenAmount ?? 0)}
+                    {formatCurrency(totalOpenAmount)}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Strafen + offene Beiträge
@@ -376,7 +412,7 @@ function GroupPage() {
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="text-2xl font-black tracking-tight text-foreground">
-                    {financialLoading ? "…" : formatCurrency(financialData?.totalOpenPenalties ?? 0)}
+                    {formatCurrency(totalOpenPenalties)}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Aus gespielten Runden
@@ -396,7 +432,7 @@ function GroupPage() {
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="text-2xl font-black tracking-tight text-foreground">
-                    {financialLoading ? "…" : (financialData?.openMembershipCount ?? 0)}
+                    {openMembershipCount}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     {data?.membershipFee && data.membershipFee > 0
@@ -412,18 +448,18 @@ function GroupPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-black tracking-tight">Mitglieder-Salden</h3>
                 <span className="text-xs text-muted-foreground">
-                  {financialData?.members.length ?? 0} Spieler
+                  {displayedMembers.length} {displayedMembers.length === 1 ? "Spieler" : "Spieler"}
                 </span>
               </div>
 
-              {financialLoading ? (
+              {isLoading ? (
                 <div className="space-y-3">
                   <div className="h-28 rounded-2xl bg-muted animate-pulse" />
                   <div className="h-28 rounded-2xl bg-muted animate-pulse" />
                 </div>
-              ) : financialData?.members && financialData.members.length > 0 ? (
+              ) : displayedMembers.length > 0 ? (
                 <div className="space-y-3">
-                  {financialData.members.map((member) => (
+                  {displayedMembers.map((member) => (
                     <MemberFinancialCard
                       key={member.userId}
                       member={member}

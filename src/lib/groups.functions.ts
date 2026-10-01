@@ -359,36 +359,45 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
     // 4. Alle Strafen aus Runden dieser Gruppe laden
     const penaltiesByUser = new Map<string, number>();
     if (roundIds.length > 0) {
-      const { data: penalties, error: penaltiesError } = await sb
-        .from("penalties")
-        .select("amount, round_players(profile_id)")
-        .in("round_id", roundIds);
-      if (penaltiesError) throw new Error(penaltiesError.message);
-
-      for (const p of penalties ?? []) {
-        const profileId = (p.round_players as any)?.profile_id;
-        if (profileId) {
-          penaltiesByUser.set(profileId, (penaltiesByUser.get(profileId) ?? 0) + Number(p.amount ?? 0));
+      try {
+        const { data: penalties, error: penaltiesError } = await sb
+          .from("penalties")
+          .select("amount, round_players(profile_id)")
+          .in("round_id", roundIds);
+        if (!penaltiesError && penalties) {
+          for (const p of penalties) {
+            const profileId = (p.round_players as any)?.profile_id;
+            if (profileId) {
+              penaltiesByUser.set(profileId, (penaltiesByUser.get(profileId) ?? 0) + Number(p.amount ?? 0));
+            }
+          }
         }
+      } catch (err) {
+        console.warn("Fehler beim Abrufen der Strafen:", err);
       }
     }
 
-    // 5. Alle Zahlungen aus group_payments laden
-    const { data: payments, error: paymentsError } = await (sb as any)
-      .from("group_payments")
-      .select("user_id, amount, type")
-      .eq("group_id", data.groupId);
-    if (paymentsError) throw new Error(paymentsError.message);
-
+    // 5. Alle Zahlungen aus group_payments laden (falls Tabelle existiert)
     const paidPenaltiesByUser = new Map<string, number>();
     const paidMembershipByUser = new Map<string, number>();
-    for (const p of payments ?? []) {
-      const amt = Number(p.amount ?? 0);
-      if (p.type === "penalty") {
-        paidPenaltiesByUser.set(p.user_id, (paidPenaltiesByUser.get(p.user_id) ?? 0) + amt);
-      } else if (p.type === "membership_fee") {
-        paidMembershipByUser.set(p.user_id, (paidMembershipByUser.get(p.user_id) ?? 0) + amt);
+    try {
+      const { data: payments, error: paymentsError } = await (sb as any)
+        .from("group_payments")
+        .select("user_id, amount, type")
+        .eq("group_id", data.groupId);
+
+      if (!paymentsError && payments) {
+        for (const p of payments) {
+          const amt = Number(p.amount ?? 0);
+          if (p.type === "penalty") {
+            paidPenaltiesByUser.set(p.user_id, (paidPenaltiesByUser.get(p.user_id) ?? 0) + amt);
+          } else if (p.type === "membership_fee") {
+            paidMembershipByUser.set(p.user_id, (paidMembershipByUser.get(p.user_id) ?? 0) + amt);
+          }
+        }
       }
+    } catch (err) {
+      console.warn("Fehler beim Abrufen der group_payments:", err);
     }
 
     const memberFinancials: MemberFinancials[] = (members ?? []).map((m) => {
@@ -398,7 +407,8 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
       const openPenalties = Math.max(0, totalPenalties - paidPenalties);
       const paidMembershipFee = paidMembershipByUser.get(userId) ?? 0;
       const membershipFeeStatus = membershipFee > 0 && paidMembershipFee >= membershipFee ? "paid" : (membershipFee > 0 ? "open" : "paid");
-      const totalOpen = openPenalties + (membershipFeeStatus === "open" ? membershipFee : 0);
+      const openMembershipFee = membershipFeeStatus === "open" ? Math.max(0, membershipFee - paidMembershipFee) : 0;
+      const totalOpen = openPenalties + openMembershipFee;
 
       const p = m.profiles as any;
       const name = p?.display_name || p?.handle || "Unbekannt";
@@ -418,8 +428,9 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
       };
     });
 
-    // Sortierung: Größter offener Gesamtsaldo zuerst, dann Name
+    // Sortierung: Admins zuerst, dann nach offenem Saldo absteigend, dann alphabetisch
     memberFinancials.sort((a, b) => {
+      if (a.role !== b.role) return a.role === "admin" ? -1 : 1;
       if (b.totalOpen !== a.totalOpen) return b.totalOpen - a.totalOpen;
       return a.name.localeCompare(b.name, "de");
     });
@@ -468,11 +479,10 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
     if (!isAdmin && !isOwn) throw new Error("Keine Berechtigung für diese Ansicht");
 
     // 1. Runden der Gruppe laden
-    const { data: groupRounds, error: roundsError } = await sb
+    const { data: groupRounds } = await sb
       .from("rounds")
       .select("id, name, played_on")
       .eq("group_id", data.groupId);
-    if (roundsError) throw new Error(roundsError.message);
 
     const roundMap = new Map((groupRounds ?? []).map((r) => [r.id, r]));
     const roundIds = Array.from(roundMap.keys());
@@ -489,44 +499,57 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
     let penaltiesList: MemberPaymentHistory["penalties"] = [];
 
     if (roundIds.length > 0) {
-      const { data: penalties, error: penaltiesError } = await sb
-        .from("penalties")
-        .select("amount, code, created_at, round_id, round_players!inner(profile_id)")
-        .in("round_id", roundIds)
-        .eq("round_players.profile_id", data.userId)
-        .order("created_at", { ascending: false });
-      if (penaltiesError) throw new Error(penaltiesError.message);
+      try {
+        const { data: penalties, error: penaltiesError } = await sb
+          .from("penalties")
+          .select("amount, code, created_at, round_id, round_players!inner(profile_id)")
+          .in("round_id", roundIds)
+          .eq("round_players.profile_id", data.userId)
+          .order("created_at", { ascending: false });
 
-      penaltiesList = (penalties ?? []).map((p) => {
-        const round = roundMap.get(p.round_id);
-        const label = labelMap.get(p.code) ?? (p.code === "girly" ? "Girly" : p.code);
-        return {
-          amount: Number(p.amount ?? 0),
-          code: p.code,
-          label,
-          date: p.created_at,
-          roundName: round?.name ?? null,
-          roundDate: round?.played_on ?? null,
-        };
-      });
+        if (!penaltiesError && penalties) {
+          penaltiesList = penalties.map((p) => {
+            const round = roundMap.get(p.round_id);
+            const label = labelMap.get(p.code) ?? (p.code === "girly" ? "Girly" : p.code);
+            return {
+              amount: Number(p.amount ?? 0),
+              code: p.code,
+              label,
+              date: p.created_at,
+              roundName: round?.name ?? null,
+              roundDate: round?.played_on ?? null,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn("Fehler beim Laden der Spieler-Strafen:", err);
+      }
     }
 
     // 3. Zahlungen aus group_payments
-    const { data: payments, error: paymentsError } = await (sb as any)
-      .from("group_payments")
-      .select("amount, type, note, created_at")
-      .eq("group_id", data.groupId)
-      .eq("user_id", data.userId)
-      .order("created_at", { ascending: false });
-    if (paymentsError) throw new Error(paymentsError.message);
+    let paymentsList: MemberPaymentHistory["payments"] = [];
+    try {
+      const { data: payments, error: paymentsError } = await (sb as any)
+        .from("group_payments")
+        .select("amount, type, note, created_at")
+        .eq("group_id", data.groupId)
+        .eq("user_id", data.userId)
+        .order("created_at", { ascending: false });
+
+      if (!paymentsError && payments) {
+        paymentsList = payments.map((p: any) => ({
+          amount: Number(p.amount ?? 0),
+          type: p.type,
+          note: p.note,
+          date: p.created_at,
+        }));
+      }
+    } catch (err) {
+      console.warn("Fehler beim Laden der Spieler-Zahlungen:", err);
+    }
 
     return {
       penalties: penaltiesList,
-      payments: (payments ?? []).map((p: any) => ({
-        amount: Number(p.amount ?? 0),
-        type: p.type,
-        note: p.note,
-        date: p.created_at,
-      })),
+      payments: paymentsList,
     };
   });
