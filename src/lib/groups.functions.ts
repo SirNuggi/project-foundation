@@ -347,6 +347,8 @@ export const recordGroupPayment = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const DEFAULT_GROUP_RULES = [
   { code: "double_par", label: "Doppel-Par", amount: 0.5, is_automatic: true },
   { code: "three_putt", label: "3-Putt", amount: 0.5, is_automatic: true },
 ];
