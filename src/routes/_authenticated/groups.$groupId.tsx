@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState, useMemo } from "react";
-import { Coins, Info, Plus, Settings, Trash2, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, Coins, Info, Plus, Receipt, Settings, Trash2, Users, Wallet, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GroupPenaltyRulesDialog } from "@/components/group/GroupPenaltyRulesDialog";
@@ -57,6 +57,13 @@ const baseTabs: SubNavItem[] = [
 ];
 const fundTab: SubNavItem = { id: "fund", label: "Kasse", icon: Coins };
 
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  }).format(amount);
+}
+
 function GroupPage() {
   const { groupId } = Route.useParams();
   const qc = useQueryClient();
@@ -65,9 +72,9 @@ function GroupPage() {
   const removeMember = useServerFn(removeGroupMember);
   const rename = useServerFn(renameGroup);
   const [tab, setTab] = useState("members");
-    const [addOpen, setAddOpen] = useState(false);
-    const [rulesOpen, setRulesOpen] = useState(false);
-    const [fee, setFee] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [fee, setFee] = useState("");
 
   const [toRemove, setToRemove] = useState<Member | null>(null);
   const [groupName, setGroupName] = useState("");
@@ -80,13 +87,8 @@ function GroupPage() {
   const fetchFinancialOverview = useServerFn(getGroupFinancialOverview);
   const hasFund = !!data?.hasPenaltyFund;
   const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
-  
-  // Compute current user ID from members list based on myRole
-  const currentUserId = useMemo(() => {
-    if (!data?.members || !data?.myRole) return "";
-    const member = data.members.find(m => m.role === data.myRole);
-    return member ? member.userId : "";
-  }, [data?.members, data?.myRole]);
+
+  const currentUserId = data?.myUserId ?? "";
 
   const { data: financialData, isLoading: financialLoading } = useQuery({
     queryKey: ["group-financial", groupId],
@@ -135,10 +137,10 @@ function GroupPage() {
   }, [data, loaded]);
 
   async function refresh() {
-      await qc.invalidateQueries({ queryKey: key });
-      await qc.invalidateQueries({ queryKey: ["my-groups"] });
-      await qc.invalidateQueries({ queryKey: ["group-financial", groupId] });
-    }
+    await qc.invalidateQueries({ queryKey: key });
+    await qc.invalidateQueries({ queryKey: ["my-groups"] });
+    await qc.invalidateQueries({ queryKey: ["group-financial", groupId] });
+  }
 
   async function handleAdd(profileId: string) {
     try {
@@ -206,6 +208,7 @@ function GroupPage() {
           groupTabs.findIndex((t) => t.id === tab),
         )}
       >
+        {/* Tab 1: Mitglieder */}
         <section className="px-6 pt-8 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -254,6 +257,7 @@ function GroupPage() {
           </div>
         </section>
 
+        {/* Tab 2: Einstellungen */}
         <section className="px-6 pt-8 pb-4">
           <h2 className="text-xl font-black">Einstellungen</h2>
           <p className="mt-1 text-sm text-muted-foreground">Gruppeneinstellungen verwalten</p>
@@ -327,54 +331,116 @@ function GroupPage() {
             </div>
           )}
         </section>
+
+        {/* Tab 3: Kasse */}
         {hasFund ? (
-          <>
-            <section className="px-6 pt-8 pb-4">
+          <section className="px-6 pt-8 pb-12 space-y-6">
+            <div>
               <h2 className="text-xl font-black">Kassenübersicht</h2>
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card className="border-none bg-background">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt ausstehender Betrag</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-2xl font-bold">
-                    € {financialData?.totalOpenAmount.toFixed(2) ?? 0}
-                  </CardContent>
-                </Card>
-                <Card className="border-none bg-background">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtsumme offene Strafen</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-2xl font-bold">
-                    € {financialData?.totalOpenPenalties.toFixed(2) ?? 0}
-                  </CardContent>
-                </Card>
-                <Card className="border-none bg-background">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Anzahl offener Mitgliedsbeiträge</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-2xl font-bold">
-                    {financialData?.openMembershipCount ?? 0}
-                  </CardContent>
-                </Card>
+              <p className="text-sm text-muted-foreground">
+                Finanzen, offene Beträge und Zahlungen der Gruppenmitglieder
+              </p>
+            </div>
+
+            {/* A. KPI-Übersichtskarten */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Gesamt ausstehender Betrag */}
+              <Card className="rounded-2xl border bg-card/80 shadow-none">
+                <CardHeader className="pb-1 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-semibold text-muted-foreground">
+                      Gesamt ausstehend
+                    </CardTitle>
+                    <Wallet className="h-4 w-4 text-destructive" />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="text-2xl font-black tracking-tight text-destructive">
+                    {financialLoading ? "…" : formatCurrency(financialData?.totalOpenAmount ?? 0)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Strafen + offene Beiträge
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Gesamtsumme offene Strafen */}
+              <Card className="rounded-2xl border bg-card/80 shadow-none">
+                <CardHeader className="pb-1 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-semibold text-muted-foreground">
+                      Offene Strafen
+                    </CardTitle>
+                    <Receipt className="h-4 w-4 text-amber-500" />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="text-2xl font-black tracking-tight text-foreground">
+                    {financialLoading ? "…" : formatCurrency(financialData?.totalOpenPenalties ?? 0)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Aus gespielten Runden
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Offene Mitgliedsbeiträge */}
+              <Card className="rounded-2xl border bg-card/80 shadow-none">
+                <CardHeader className="pb-1 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-semibold text-muted-foreground">
+                      Offene Beiträge
+                    </CardTitle>
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="text-2xl font-black tracking-tight text-foreground">
+                    {financialLoading ? "…" : (financialData?.openMembershipCount ?? 0)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {data?.membershipFee && data.membershipFee > 0
+                      ? `je ${formatCurrency(data.membershipFee)}`
+                      : "Kein Beitrag definiert"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* B. Spieler-Karten */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black tracking-tight">Mitglieder-Salden</h3>
+                <span className="text-xs text-muted-foreground">
+                  {financialData?.members.length ?? 0} Spieler
+                </span>
               </div>
-            </section>
-            
-            <section className="px-6 pb-8">
-              <h2 className="text-xl font-black mb-6">Mitglieder</h2>
-              <div className="space-y-4">
-                {financialData?.members.map((member) => (
-                                  <MemberFinancialCard
-                                    key={member.userId}
-                                    member={member}
-                                    groupId={groupId}
-                                    isAdmin={isAdmin}
-                                    currentUserId={currentUserId ?? ""}
-                                    membershipFee={data?.membershipFee ?? 0}
-                                  />
-                                )) ?? []}
-              </div>
-            </section>
-          </>
+
+              {financialLoading ? (
+                <div className="space-y-3">
+                  <div className="h-28 rounded-2xl bg-muted animate-pulse" />
+                  <div className="h-28 rounded-2xl bg-muted animate-pulse" />
+                </div>
+              ) : financialData?.members && financialData.members.length > 0 ? (
+                <div className="space-y-3">
+                  {financialData.members.map((member) => (
+                    <MemberFinancialCard
+                      key={member.userId}
+                      member={member}
+                      groupId={groupId}
+                      isAdmin={isAdmin}
+                      currentUserId={currentUserId}
+                      membershipFee={data?.membershipFee ?? 0}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  Keine Mitglieder in dieser Gruppe gefunden.
+                </div>
+              )}
+            </div>
+          </section>
         ) : null}
       </SlideViews>
 
@@ -395,14 +461,9 @@ function GroupPage() {
               {toRemove?.name} wird aus der Gruppe entfernt. Der Spieler selbst bleibt erhalten.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
+          <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Entfernen
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmRemove}>Entfernen</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

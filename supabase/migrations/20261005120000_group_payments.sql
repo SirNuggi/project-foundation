@@ -1,4 +1,5 @@
-CREATE TABLE public.group_payments (
+-- Kassen- und Zahlungsverwaltung für Gruppen (group_payments)
+CREATE TABLE IF NOT EXISTS public.group_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id uuid NOT NULL REFERENCES public.groups(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -15,17 +16,21 @@ GRANT ALL ON public.group_payments TO service_role;
 ALTER TABLE public.group_payments ENABLE ROW LEVEL SECURITY;
 
 -- Lesezugriff: Nur für Gruppen-Admins ODER wenn user_id = auth.uid() (eigene Zahlungen)
+DROP POLICY IF EXISTS "Group admins and owners read group payments" ON public.group_payments;
 CREATE POLICY "Group admins and owners read group payments" ON public.group_payments
   FOR SELECT TO authenticated
   USING (
-    is_group_admin(group_id, auth.uid()) OR user_id = auth.uid()
+    public.is_group_admin(group_id, auth.uid()) OR user_id = auth.uid()
   );
 
--- Schreibzugriff (Insert/Delete): Nur für Gruppen-Admins
+-- Schreibzugriff (Insert): Nur für Gruppen-Admins
+DROP POLICY IF EXISTS "Group admins insert group payments" ON public.group_payments;
 CREATE POLICY "Group admins insert group payments" ON public.group_payments
   FOR INSERT TO authenticated
-  WITH CHECK (is_group_admin(group_id, auth.uid()));
+  WITH CHECK (public.is_group_admin(group_id, auth.uid()));
 
+-- Schreibzugriff (Delete): Nur für Gruppen-Admins
+DROP POLICY IF EXISTS "Group admins delete group payments" ON public.group_payments;
 CREATE POLICY "Group admins delete group payments" ON public.group_payments
   FOR DELETE TO authenticated
-  USING (is_group_admin(group_id, auth.uid()));
+  USING (public.is_group_admin(group_id, auth.uid()));
