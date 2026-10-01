@@ -60,8 +60,8 @@ export function GroupPenaltyRulesDialog({
   function addRule() {
     const label = newLabel.trim();
     const amount = parse(newAmount);
-    if (!label) return toast.error("Bitte einen Namen eingeben");
-    if (amount === null) return toast.error("Ungültiger Betrag");
+    if (!label) { toast.error("Bitte einen Namen eingeben"); return; }
+    if (amount === null) { toast.error("Ungültiger Betrag"); return; }
     let code = slug(label);
     let i = 1;
     while (rules.some((r) => r.code === code)) code = `${slug(label)}_${++i}`;
@@ -74,7 +74,7 @@ export function GroupPenaltyRulesDialog({
     const out = [];
     for (const r of rules) {
       const amount = parse(r.amount);
-      if (amount === null || !r.label.trim()) return toast.error(`Ungültige Angabe bei "${r.label || "Strafe"}"`);
+      if (amount === null || !r.label.trim()) { toast.error(`Ungültige Angabe bei "${r.label || "Strafe"}"`); return; }
       out.push({ code: r.code, label: r.label.trim(), amount, is_automatic: r.is_automatic });
     }
     setBusy(true);
