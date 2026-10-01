@@ -430,12 +430,12 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
     if (penaltiesError) throw new Error(penaltiesError.message);
 
     // Zahlungen aus group_payments
-    const { data: payments, error: paymentsError } = await sb
-      .from("group_payments")
-      .select("amount, type, note, created_at")
-      .eq("group_id", data.groupId)
-      .eq("user_id", data.userId)
-      .order("created_at", { ascending: false });
+        const { data: payments, error: paymentsError } = await (sb as any)
+          .from("group_payments")
+          .select("amount, type, note, created_at")
+          .eq("group_id", data.groupId)
+          .eq("user_id", data.userId)
+          .order("created_at", { ascending: false });
     if (paymentsError) throw new Error(paymentsError.message);
 
     return {
