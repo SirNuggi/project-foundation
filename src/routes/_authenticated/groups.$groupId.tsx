@@ -72,25 +72,17 @@ function GroupPage() {
   const [loaded, setLoaded] = useState(false);
   const key = ["group", groupId];
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => fetchGroup({ data: { groupId } }) });
-    const { data: financialData, isLoading: financialLoading } = useQuery({
-      queryKey: ["group-financial", groupId],
-      queryFn: () => fetchFinancialOverview({ data: { groupId } }),
-      enabled: hasFund,
-    });
-    const isAdmin = data?.myRole === "admin";
+  const isAdmin = data?.myRole === "admin";
   const updateFund = useServerFn(updateGroupFund);
   const fetchFinancialOverview = useServerFn(getGroupFinancialOverview);
-  const recordPayment = useServerFn(recordGroupPayment);
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [fee, setFee] = useState("0,00");
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [paymentMember, setPaymentMember] = useState<FinancialMember | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentType, setPaymentType] = useState<"penalty" | "membership_fee">("penalty");
-  const [paymentNote, setPaymentNote] = useState("");
-  const [savingPayment, setSavingPayment] = useState(false);
   const hasFund = !!data?.hasPenaltyFund;
   const groupTabs = hasFund ? [...baseTabs, fundTab] : baseTabs;
+
+  const { data: financialData, isLoading: financialLoading } = useQuery({
+    queryKey: ["group-financial", groupId],
+    queryFn: () => fetchFinancialOverview({ data: { groupId } }),
+    enabled: hasFund,
+  });
 
   useEffect(() => {
     if (data) setFee(data.membershipFee.toFixed(2).replace(".", ","));
@@ -326,10 +318,53 @@ function GroupPage() {
           )}
         </section>
         {hasFund ? (
-          <section className="px-6 pt-8 pb-4">
-            <h2 className="text-xl font-black">Kasse</h2>
-            <p className="mt-4 text-sm text-muted-foreground">Keine Einträge in der Kasse.</p>
-          </section>
+          <>
+            <section className="px-6 pt-8 pb-4">
+              <h2 className="text-xl font-black">Kassenübersicht</h2>
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card className="border-none bg-background">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Gesamteinnahmen</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    € {financialData?.totalIncome.toFixed(2) ?? 0}
+                  </CardContent>
+                </Card>
+                <Card className="border-none bg-background">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Ausstehend insgesamt</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    € {financialData?.totalOutstanding.toFixed(2) ?? 0}
+                  </CardContent>
+                </Card>
+                <Card className="border-none bg-background">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Mitglieder mit offenen Beträgen</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">
+                    {financialData?.membersWithOutstanding ?? 0}
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+            
+            <section className="px-6 pb-8">
+              <h2 className="text-xl font-black mb-6">Mitglieder</h2>
+              <div className="space-y-4">
+                {financialData?.members.map((member) => (
+                  <MemberFinancialCard
+                    key={member.userId}
+                    member={member}
+                    groupId={groupId}
+                    isAdmin={isAdmin}
+                    currentUserId={data?.myUserId ?? ""}
+                    membershipFee={data?.membershipFee ?? 0}
+                  />
+                )) ?? []}
+              </div>
+            </section>
+          </>
         ) : null}
       </SlideViews>
 
