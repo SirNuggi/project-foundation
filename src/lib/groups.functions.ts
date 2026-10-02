@@ -166,6 +166,35 @@ export const removeGroupMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const makeGroupAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ groupId: z.string().uuid(), memberId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: membership, error: membershipError } = await context.supabase
+      .from("group_members")
+      .select("id, role")
+      .eq("id", data.memberId)
+      .eq("group_id", data.groupId)
+      .maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!membership) throw new Error("Mitglied nicht gefunden");
+    if (membership.role === "admin") throw new Error("Spieler ist bereits Admin");
+
+    // Prüfe ob der aktuelle Nutzer Admin ist
+    const { data: isAdmin } = await context.supabase.rpc("is_group_admin", {
+      _group_id: data.groupId,
+      _user_id: context.userId,
+    });
+    if (!isAdmin) throw new Error("Nur Gruppen-Admins können andere zu Admins befördern");
+
+    const { error } = await context.supabase
+      .from("group_members")
+      .update({ role: "admin" })
+      .eq("id", data.memberId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const updateGroupFund = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

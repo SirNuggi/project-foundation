@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { AlertCircle, Coins, Info, Plus, Receipt, Settings, Trash2, Users, Wallet, X } from "lucide-react";
+import { AlertCircle, Coins, Info, Plus, Receipt, Settings, Shield, Trash2, Users, Wallet, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GroupPenaltyRulesDialog } from "@/components/group/GroupPenaltyRulesDialog";
@@ -30,6 +30,7 @@ import {
   addGroupMember,
   getGroupDetail,
   getGroupFinancialOverview,
+  makeGroupAdmin,
   removeGroupMember,
   renameGroup,
   updateGroupFund,
@@ -71,6 +72,7 @@ function GroupPage() {
   const fetchGroup = useServerFn(getGroupDetail);
   const addMember = useServerFn(addGroupMember);
   const removeMember = useServerFn(removeGroupMember);
+  const promoteMember = useServerFn(makeGroupAdmin);
   const rename = useServerFn(renameGroup);
   const [tab, setTab] = useState("members");
   const [addOpen, setAddOpen] = useState(false);
@@ -78,7 +80,8 @@ function GroupPage() {
   const [fee, setFee] = useState("");
 
   const [toRemove, setToRemove] = useState<Member | null>(null);
-  const [groupName, setGroupName] = useState("");
+    const [toPromote, setToPromote] = useState<Member | null>(null);
+    const [groupName, setGroupName] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const key = ["group", groupId];
@@ -155,17 +158,30 @@ function GroupPage() {
   }
 
   async function confirmRemove() {
-    if (!toRemove) return;
-    try {
-      await removeMember({ data: { memberId: toRemove.id } });
-      await refresh();
-      toast.success("Mitglied entfernt");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Fehler beim Entfernen");
-    } finally {
-      setToRemove(null);
+      if (!toRemove) return;
+      try {
+        await removeMember({ data: { memberId: toRemove.id } });
+        await refresh();
+        toast.success("Mitglied entfernt");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Fehler beim Entfernen");
+      } finally {
+        setToRemove(null);
+      }
     }
-  }
+  
+    async function confirmPromote() {
+      if (!toPromote) return;
+      try {
+        await promoteMember({ data: { groupId, memberId: toPromote.id } });
+        await refresh();
+        toast.success(`${toPromote.name} wurde zum Admin befördert`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Fehler beim Befördern");
+      } finally {
+        setToPromote(null);
+      }
+    }
 
   async function handleRename(e: React.FormEvent) {
     e.preventDefault();
@@ -260,36 +276,47 @@ function GroupPage() {
           <div className="mt-5 space-y-3">
             {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
             {data?.members.map((m) => {
-              const canRemove = isAdmin && m.userId !== data.createdBy && m.role !== "admin";
-              return (
-                <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{m.name}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        HCP {m.handicapIndex.toFixed(1).replace(".", ",")}
-                      </span>
-                      <Badge variant={m.userType === "passive" ? "secondary" : "outline"}>
-                        {m.userType === "passive" ? "Passiv" : "Aktiv"}
-                      </Badge>
-                      <Badge variant={m.role === "admin" ? "default" : "outline"}>
-                        {m.role === "admin" ? "Admin" : "Mitglied"}
-                      </Badge>
-                    </div>
-                  </div>
-                  {canRemove && (
-                    <button
-                      type="button"
-                      onClick={() => setToRemove(m)}
-                      aria-label={`${m.name} entfernen`}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-muted"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                          const canRemove = isAdmin && m.userId !== data.createdBy && m.role !== "admin";
+                          const canPromote = isAdmin && m.userId !== data.createdBy && m.role !== "admin";
+                          return (
+                            <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-bold">{m.name}</p>
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    HCP {m.handicapIndex.toFixed(1).replace(".", ",")}
+                                  </span>
+                                  <Badge variant={m.userType === "passive" ? "secondary" : "outline"}>
+                                    {m.userType === "passive" ? "Passiv" : "Aktiv"}
+                                  </Badge>
+                                  <Badge variant={m.role === "admin" ? "default" : "outline"}>
+                                    {m.role === "admin" ? "Admin" : "Mitglied"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              {canRemove && (
+                                <button
+                                  type="button"
+                                  onClick={() => setToRemove(m)}
+                                  aria-label={`${m.name} entfernen`}
+                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-muted"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              )}
+                              {canPromote && (
+                                <button
+                                  type="button"
+                                  onClick={() => setToPromote(m)}
+                                  aria-label={`${m.name} zum Admin befördern`}
+                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-green-600 hover:bg-muted"
+                                >
+                                  <Shield className="h-5 w-5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
           </div>
         </section>
 
@@ -490,19 +517,34 @@ function GroupPage() {
       />
 
       <AlertDialog open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}>
-        <AlertDialogContent className="w-[calc(100%-2rem)] rounded-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mitglied entfernen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {toRemove?.name} wird aus der Gruppe entfernt. Der Spieler selbst bleibt erhalten.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove}>Entfernen</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <AlertDialogContent className="w-[calc(100%-2rem)] rounded-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mitglied entfernen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {toRemove?.name} wird aus der Gruppe entfernt. Der Spieler selbst bleibt erhalten.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmRemove}>Entfernen</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+      
+            <AlertDialog open={!!toPromote} onOpenChange={(o) => !o && setToPromote(null)}>
+              <AlertDialogContent className="w-[calc(100%-2rem)] rounded-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Spieler zum Admin befördern?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {toPromote?.name} wird zum Gruppen-Admin befördert. Admins können Gruppen-Einstellungen ändern, Mitglieder hinzufügen/entfernen und Zahlungen verbuchen.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmPromote}>Befördern</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
     </main>
   );
 }
