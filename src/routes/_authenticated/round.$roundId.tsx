@@ -122,7 +122,10 @@ function RoundPage() {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { strokes: number; putts: number }>>({});
   const [mapOpen, setMapOpen] = useState(false);
+  const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const { data: board, isLoading } = useQuery({
     queryKey: ["round-board", roundId],
@@ -171,14 +174,51 @@ function RoundPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!board?.flights.length) return;
+    setActiveFlightId((current) => {
+      if (current && board.flights.some((flight) => flight.id === current)) return current;
+      return board.myFlightId ?? board.flights[0]?.id ?? null;
+    });
+  }, [board]);
+
   const par = board?.pars?.[hole] ?? 4;
   const myFlight = board?.flights.find((f) => f.id === board?.myFlightId) ?? null;
   const flightFinished = myFlight?.status === "finished";
   const finished = board?.status === "finished" || flightFinished;
-  const myPlayers =
+  const orderedFlights = useMemo(
+    () => [...(board?.flights ?? [])].sort((a, b) => a.number - b.number),
+    [board?.flights],
+  );
+  const activeFlight =
+    orderedFlights.find((flight) => flight.id === activeFlightId) ?? myFlight ?? orderedFlights[0] ?? null;
+  const activeFlightIndex = activeFlight
+    ? orderedFlights.findIndex((flight) => flight.id === activeFlight.id)
+    : -1;
+  const viewingOwnFlight = !!activeFlight && activeFlight.id === board?.myFlightId;
+  const activeFlightFinished = board?.status === "finished" || activeFlight?.status === "finished";
+  const visiblePlayers =
     board?.players.filter((p) =>
-      board.myFlightId ? p.flightId === board.myFlightId : true,
+      activeFlight?.id ? p.flightId === activeFlight.id : true,
     ) ?? [];
+
+  function changeFlight(nextIndex: number) {
+    if (nextIndex < 0 || nextIndex >= orderedFlights.length) return;
+    setSlideDirection(nextIndex > activeFlightIndex ? "left" : "right");
+    setActiveFlightId(orderedFlights[nextIndex]?.id ?? null);
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLElement>) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    changeFlight(deltaX < 0 ? activeFlightIndex + 1 : activeFlightIndex - 1);
+  }
 
   // Wake Lock: Bildschirm bleibt an, solange die Runde läuft.
   const roundActive = !!board && !finished;
@@ -299,7 +339,8 @@ function RoundPage() {
     return chunks;
   }, [holeCount]);
 
-  const canDeleteFlight = !!board?.canDeleteMyFlight && !!board?.myFlightId;
+  const canDeleteFlight =
+    viewingOwnFlight && !!board?.canDeleteMyFlight && !!board?.myFlightId;
 
   async function removeMyFlight() {
     if (!board?.myFlightId) return;
@@ -322,8 +363,8 @@ function RoundPage() {
   return (
     <main className="min-h-screen bg-background pb-64 pt-[120px]">
       <header className="fixed inset-x-0 top-0 z-30 flex h-[120px] flex-col justify-center bg-secondary px-4 text-secondary-foreground">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-black leading-5 tracking-tight">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <h1 className="min-w-0 truncate text-xl font-black leading-5 tracking-tight">
             {board ? (
               <>
                 <span>{board.roundName ?? board.courseName}</span>
@@ -340,6 +381,13 @@ function RoundPage() {
               "Runde"
             )}
           </h1>
+          {activeFlight && orderedFlights.length > 0 ? (
+            <span className="shrink-0 pt-0.5 text-xs font-bold text-secondary-foreground/70">
+              Flight {activeFlight.number} von {orderedFlights.length}
+            </span>
+          ) : null}
+        </div>
+        <div className="min-w-0">
           {board?.roundName ? (
             <p className="truncate text-xs font-semibold leading-3 text-secondary-foreground/70">
               {board.courseName}
@@ -494,8 +542,27 @@ function RoundPage() {
         </div>
       </header>
 
-      <section className="space-y-4 px-6 py-6">
-        {myPlayers.map((p) => {
+      <section
+        aria-label={activeFlight ? `Flight ${activeFlight.number} von ${orderedFlights.length}` : "Flight"}
+        className="overflow-hidden px-6 py-6 touch-pan-y"
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          if (touch) touchStart.current = { x: touch.clientX, y: touch.clientY };
+        }}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => {
+          touchStart.current = null;
+        }}
+      >
+        <div
+          key={activeFlight?.id ?? "flight"}
+          className={`space-y-4 motion-reduce:animate-none ${
+            slideDirection === "left"
+              ? "animate-in fade-in slide-in-from-right-6 duration-300"
+              : "animate-in fade-in slide-in-from-left-6 duration-300"
+          }`}
+        >
+        {visiblePlayers.map((p) => {
           const s = scoreFor(p.id);
           const girlyOn = penaltyActive(p.id, "girly");
           return (
@@ -531,7 +598,7 @@ function RoundPage() {
                   </span>
                   <button
                     type="button"
-                    disabled={finished}
+                    disabled={!viewingOwnFlight || activeFlightFinished}
                     onClick={async () => {
                       try {
                         await setGirly({
@@ -565,14 +632,14 @@ function RoundPage() {
                   min={0}
                   zeroPlus={par}
                   zeroMinus={par - 1}
-                  disabled={finished}
+                  disabled={!viewingOwnFlight || activeFlightFinished}
                   onChange={(v) => update(p.id, { ...s, strokes: v })}
                 />
                 <Counter
                   label="Putts"
                   value={s.putts}
                   min={0}
-                  disabled={finished}
+                  disabled={!viewingOwnFlight || activeFlightFinished}
                   onChange={(v) => update(p.id, { ...s, putts: v })}
                 />
               </div>
@@ -580,7 +647,7 @@ function RoundPage() {
           );
         })}
 
-        {!finished && (
+        {viewingOwnFlight && !finished && (
           <Button
             variant="outline"
             className="h-13 w-full font-bold"
@@ -590,7 +657,7 @@ function RoundPage() {
           </Button>
         )}
 
-        {!finished && (
+        {viewingOwnFlight && !finished && (
           <Button
             variant="secondary"
             className="h-14 w-full text-base font-bold"
@@ -599,6 +666,7 @@ function RoundPage() {
             <Flag className="mr-2 h-5 w-5" /> Flight beenden
           </Button>
         )}
+        </div>
       </section>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
