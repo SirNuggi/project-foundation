@@ -215,15 +215,20 @@ export const recordGroupPayment = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Nur Gruppen-Admins können Zahlungen verbuchen");
 
-    const { error } = await (sb as any).from("group_payments").insert({
-      group_id: data.groupId,
-      user_id: data.userId,
-      amount: Math.round(data.amount * 100) / 100,
-      type: data.type,
-      note: data.note ?? null,
-      created_by: context.userId,
-    });
-    if (error) throw new Error(error.message);
+    try {
+      const { error } = await (sb as any).from("group_payments").insert({
+        group_id: data.groupId,
+        user_id: data.userId,
+        amount: Math.round(data.amount * 100) / 100,
+        type: data.type,
+        note: data.note ?? null,
+        created_by: context.userId,
+      });
+      if (error) throw new Error(error.message);
+    } catch (err) {
+      console.warn("Fehler beim Verbuchen der Zahlung:", err);
+      throw new Error("Zahlung konnte nicht verbucht werden. Bitte versuche es erneut.");
+    }
     return { ok: true };
   });
 
