@@ -76,6 +76,15 @@ function DistanceLine({ from, to }: { from: [number, number]; to: [number, numbe
   return <Polyline positions={points} pathOptions={{ color: "#00E05A", weight: 2, dashArray: "6 8" }} />;
 }
 
+function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
 function formatDistance(meters: number): string {
   if (meters >= 1000) return `${(meters / 1000).toFixed(2).replace(".", ",")} km`;
   return `${Math.round(meters)} m`;
