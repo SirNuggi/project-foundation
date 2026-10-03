@@ -58,8 +58,8 @@ function DistanceLine({ from, to }: { from: [number, number]; to: [number, numbe
         setPoints(null);
         return;
       }
-      const s1 = map.unproject({ x: p1.x + (dx / dist) * LINE_GAP_PX, y: p1.y + (dy / dist) * LINE_GAP_PX }, zoom);
-      const s2 = map.unproject({ x: p2.x - (dx / dist) * LINE_GAP_PX, y: p2.y - (dy / dist) * LINE_GAP_PX }, zoom);
+      const s1 = map.unproject(L.point(p1.x + (dx / dist) * LINE_GAP_PX, p1.y + (dy / dist) * LINE_GAP_PX), zoom);
+      const s2 = map.unproject(L.point(p2.x - (dx / dist) * LINE_GAP_PX, p2.y - (dy / dist) * LINE_GAP_PX), zoom);
       setPoints([
         [s1.lat, s1.lng],
         [s2.lat, s2.lng],
