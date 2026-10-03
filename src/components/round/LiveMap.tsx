@@ -115,7 +115,12 @@ export default function LiveMap() {
               position={target}
               icon={targetIcon(distance !== null ? formatDistance(distance) : "Ziel")}
             />
-            {position && <DistanceLine from={position} to={target} />}
+            {position && (
+              <Polyline
+                positions={[position, target]}
+                pathOptions={{ color: "#00E05A", weight: 2, dashArray: "6 8" }}
+              />
+            )}
           </>
         )}
       </MapContainer>
