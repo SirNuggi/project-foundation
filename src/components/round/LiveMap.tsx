@@ -4,9 +4,9 @@ import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents
 
 const meIcon = L.divIcon({
   className: "",
-  html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translateY(-50%)">
-    <div style="width:22px;height:22px;border-radius:9999px;background:#00E05A;border:3px solid #fff;box-shadow:0 0 0 6px rgba(0,224,90,0.35),0 2px 6px rgba(0,0,0,0.4)"></div>
-    <div style="margin-top:4px;background:#111;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:9999px;white-space:nowrap">Ich</div>
+  html: `<div style="position:relative;width:22px;height:22px">
+    <div style="box-sizing:border-box;width:22px;height:22px;border-radius:9999px;background:#00E05A;border:3px solid #fff;box-shadow:0 0 0 6px rgba(0,224,90,0.35),0 2px 6px rgba(0,0,0,0.4)"></div>
+    <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:9999px;white-space:nowrap">Ich</div>
   </div>`,
   iconSize: [22, 22],
   iconAnchor: [11, 11],
@@ -15,9 +15,9 @@ const meIcon = L.divIcon({
 function targetIcon(distanceText: string) {
   return L.divIcon({
     className: "",
-    html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translateY(-50%)">
-      <div style="width:18px;height:18px;border-radius:9999px;background:#111;border:3px solid #00E05A;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>
-      <div style="margin-top:4px;background:#00E05A;color:#111;font-size:12px;font-weight:800;padding:2px 8px;border-radius:9999px;white-space:nowrap">${distanceText}</div>
+    html: `<div style="position:relative;width:18px;height:18px">
+      <div style="box-sizing:border-box;width:18px;height:18px;border-radius:9999px;background:#111;border:3px solid #00E05A;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>
+      <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);background:#00E05A;color:#111;font-size:12px;font-weight:800;padding:2px 8px;border-radius:9999px;white-space:nowrap">${distanceText}</div>
     </div>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
