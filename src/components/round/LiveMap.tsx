@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import L from "leaflet";
-import { Circle, MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
 const meIcon = L.divIcon({
   className: "",
@@ -11,6 +11,18 @@ const meIcon = L.divIcon({
   iconSize: [22, 22],
   iconAnchor: [11, 11],
 });
+
+function targetIcon(distanceText: string) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translateY(-50%)">
+      <div style="width:18px;height:18px;border-radius:9999px;background:#111;border:3px solid #00E05A;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>
+      <div style="margin-top:4px;background:#00E05A;color:#111;font-size:12px;font-weight:800;padding:2px 8px;border-radius:9999px;white-space:nowrap">${distanceText}</div>
+    </div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
 
 const FALLBACK_CENTER: [number, number] = [47.5, 13.5];
 
@@ -28,10 +40,25 @@ function FollowPosition({ position }: { position: [number, number] }) {
   return null;
 }
 
+function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
+function formatDistance(meters: number): string {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(2).replace(".", ",")} km`;
+  return `${Math.round(meters)} m`;
+}
+
 export default function LiveMap() {
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
+  const [target, setTarget] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -52,6 +79,9 @@ export default function LiveMap() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  const distance =
+    position && target ? L.latLng(position[0], position[1]).distanceTo(L.latLng(target[0], target[1])) : null;
+
   return (
     <div className="relative h-full w-full">
       <MapContainer
@@ -64,6 +94,7 @@ export default function LiveMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <TargetPicker onPick={setTarget} />
         {position && (
           <>
             <FollowPosition position={position} />
@@ -77,7 +108,31 @@ export default function LiveMap() {
             )}
           </>
         )}
+        {target && (
+          <>
+            <Marker
+              position={target}
+              icon={targetIcon(distance !== null ? formatDistance(distance) : "Ziel")}
+            />
+            {position && (
+              <Polyline
+                positions={[position, target]}
+                pathOptions={{ color: "#00E05A", weight: 3, dashArray: "6 8" }}
+              />
+            )}
+          </>
+        )}
       </MapContainer>
+
+      {target && (
+        <button
+          type="button"
+          onClick={() => setTarget(null)}
+          className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-secondary px-5 py-2.5 text-sm font-bold text-secondary-foreground shadow-lg"
+        >
+          Marker entfernen
+        </button>
+      )}
 
       {denied && (
         <div className="absolute inset-x-4 top-4 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
@@ -88,6 +143,11 @@ export default function LiveMap() {
       {!position && !denied && (
         <div className="absolute inset-x-4 top-4 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
           Suche deine Position …
+        </div>
+      )}
+      {!target && !denied && position && (
+        <div className="absolute inset-x-4 bottom-6 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-center text-sm font-bold text-secondary-foreground shadow-lg">
+          Tippe auf die Karte, um einen Ziel-Marker zu setzen.
         </div>
       )}
     </div>
