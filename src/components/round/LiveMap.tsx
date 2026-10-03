@@ -40,6 +40,42 @@ function FollowPosition({ position }: { position: [number, number] }) {
   return null;
 }
 
+const LINE_GAP_PX = 26;
+
+function DistanceLine({ from, to }: { from: [number, number]; to: [number, number] }) {
+  const map = useMap();
+  const [points, setPoints] = useState<[number, number][] | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const zoom = map.getZoom();
+      const p1 = map.project(L.latLng(from[0], from[1]), zoom);
+      const p2 = map.project(L.latLng(to[0], to[1]), zoom);
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < LINE_GAP_PX * 2 + 8) {
+        setPoints(null);
+        return;
+      }
+      const s1 = map.unproject(L.point(p1.x + (dx / dist) * LINE_GAP_PX, p1.y + (dy / dist) * LINE_GAP_PX), zoom);
+      const s2 = map.unproject(L.point(p2.x - (dx / dist) * LINE_GAP_PX, p2.y - (dy / dist) * LINE_GAP_PX), zoom);
+      setPoints([
+        [s1.lat, s1.lng],
+        [s2.lat, s2.lng],
+      ]);
+    };
+    update();
+    map.on("zoom", update);
+    return () => {
+      map.off("zoom", update);
+    };
+  }, [from[0], from[1], to[0], to[1], map]);
+
+  if (!points) return null;
+  return <Polyline positions={points} pathOptions={{ color: "#00E05A", weight: 2, dashArray: "6 8" }} />;
+}
+
 function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
   useMapEvents({
     click(e) {
@@ -114,12 +150,7 @@ export default function LiveMap() {
               position={target}
               icon={targetIcon(distance !== null ? formatDistance(distance) : "Ziel")}
             />
-            {position && (
-              <Polyline
-                positions={[position, target]}
-                pathOptions={{ color: "#00E05A", weight: 3, dashArray: "6 8" }}
-              />
-            )}
+            {position && <DistanceLine from={position} to={target} />}
           </>
         )}
       </MapContainer>
