@@ -551,7 +551,8 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
       try {
         const { data: penalties, error: penaltiesError } = await sb
           .from("penalties")
-          .select("amount, code, created_at, round_id, round_players!inner(profile_id)")
+          .select("amount, code, created_at, penalty_date, round_id, round_players!inner(profile_id)")
+          .eq("group_id", data.groupId)
           .in("round_id", roundIds)
           .eq("round_players.profile_id", data.userId)
           .order("created_at", { ascending: false });
@@ -564,7 +565,7 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
               amount: Number(p.amount ?? 0),
               code: p.code,
               label,
-              date: p.created_at,
+              date: p.penalty_date ?? round?.played_on ?? p.created_at,
               roundName: round?.name ?? null,
               roundDate: round?.played_on ?? null,
             };
