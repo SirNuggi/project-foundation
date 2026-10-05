@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Coins, Crown, Flag, MapPin, Trophy } from "lucide-react";
-import { getHallOfShame, getMyStats, getUserGroups, type UserGroup } from "@/lib/stats.functions";
+import { getHallOfShame, getMyStats, getUserGroups, OTHER_GROUP_ID, type UserGroup } from "@/lib/stats.functions";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import {
   Select,
@@ -135,6 +135,7 @@ function StatsPage() {
                     {group.name}
                   </SelectItem>
                 ))}
+                <SelectItem value={OTHER_GROUP_ID}>Sonstige</SelectItem>
               </SelectContent>
             </Select>
           </div>
