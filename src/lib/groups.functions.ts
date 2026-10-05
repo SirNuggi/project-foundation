@@ -388,18 +388,20 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
     const { data: groupRounds, error: roundsError } = await sb
       .from("rounds")
       .select("id")
-      .eq("group_id", data.groupId);
+      .eq("group_id", data.groupId)
+      .eq("status", "finished");
     if (roundsError) throw new Error(roundsError.message);
 
     const roundIds = (groupRounds ?? []).map((r) => r.id);
 
-    // 4. Alle Strafen aus Runden dieser Gruppe laden
+    // 4. Strafen: nur beendete Runden und nur mit group_id dieser Gruppe
     const penaltiesByUser = new Map<string, number>();
     if (roundIds.length > 0) {
       try {
         const { data: penalties, error: penaltiesError } = await sb
           .from("penalties")
           .select("amount, round_players(profile_id)")
+          .eq("group_id", data.groupId)
           .in("round_id", roundIds);
         if (!penaltiesError && penalties) {
           for (const p of penalties) {
