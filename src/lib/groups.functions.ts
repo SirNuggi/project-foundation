@@ -347,7 +347,8 @@ export type MemberFinancials = {
   membershipFee: number;         // Gruppen-Mitgliedsbeitrag
   paidMembershipFee: number;     // Gezahlter Mitgliedsbeitrag
   membershipFeeStatus: "paid" | "open"; // "paid" wenn paidMembershipFee >= membershipFee
-  totalOpen: number;             // openPenalties + (membershipFeeStatus === "open" ? membershipFee : 0)
+  totalOpen: number;             // offener Betrag (0 bei Guthaben)
+  balance: number;               // Saldo: eingezahlt - geschuldet (positiv = Guthaben)
 };
 
 export type GroupFinancialOverview = {
@@ -355,6 +356,8 @@ export type GroupFinancialOverview = {
   totalOpenAmount: number;
   totalOpenPenalties: number;
   openMembershipCount: number;
+  fundTotal: number;             // Gesamtkasse: Summe aller Einzahlungen
+  totalCredit: number;           // Summe aller Guthaben
 };
 
 export const getGroupFinancialOverview = createServerFn({ method: "GET" })
@@ -385,18 +388,20 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
     const { data: groupRounds, error: roundsError } = await sb
       .from("rounds")
       .select("id")
-      .eq("group_id", data.groupId);
+      .eq("group_id", data.groupId)
+      .eq("status", "finished");
     if (roundsError) throw new Error(roundsError.message);
 
     const roundIds = (groupRounds ?? []).map((r) => r.id);
 
-    // 4. Alle Strafen aus Runden dieser Gruppe laden
+    // 4. Strafen: nur beendete Runden und nur mit group_id dieser Gruppe
     const penaltiesByUser = new Map<string, number>();
     if (roundIds.length > 0) {
       try {
         const { data: penalties, error: penaltiesError } = await sb
           .from("penalties")
           .select("amount, round_players(profile_id)")
+          .eq("group_id", data.groupId)
           .in("round_id", roundIds);
         if (!penaltiesError && penalties) {
           for (const p of penalties) {
@@ -434,6 +439,12 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
       console.warn("Fehler beim Abrufen der group_payments:", err);
     }
 
+    let fundTotal = 0;
+    for (const v of paidPenaltiesByUser.values()) fundTotal += v;
+    for (const v of paidMembershipByUser.values()) fundTotal += v;
+
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+
     const memberFinancials: MemberFinancials[] = (members ?? []).map((m) => {
       const userId = m.user_id;
       const totalPenalties = penaltiesByUser.get(userId) ?? 0;
@@ -441,8 +452,8 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
       const openPenalties = Math.max(0, totalPenalties - paidPenalties);
       const paidMembershipFee = paidMembershipByUser.get(userId) ?? 0;
       const membershipFeeStatus = membershipFee > 0 && paidMembershipFee >= membershipFee ? "paid" : (membershipFee > 0 ? "open" : "paid");
-      const openMembershipFee = membershipFeeStatus === "open" ? Math.max(0, membershipFee - paidMembershipFee) : 0;
-      const totalOpen = openPenalties + openMembershipFee;
+      const balance = r2(paidPenalties + paidMembershipFee - totalPenalties - membershipFee);
+      const totalOpen = balance < 0 ? -balance : 0;
 
       const p = m.profiles as any;
       const name = p?.display_name || p?.handle || "Unbekannt";
@@ -459,25 +470,29 @@ export const getGroupFinancialOverview = createServerFn({ method: "GET" })
         paidMembershipFee,
         membershipFeeStatus,
         totalOpen,
+        balance,
       };
     });
 
     // Sortierung: Admins zuerst, dann nach offenem Saldo absteigend, dann alphabetisch
     memberFinancials.sort((a, b) => {
       if (a.role !== b.role) return a.role === "admin" ? -1 : 1;
-      if (b.totalOpen !== a.totalOpen) return b.totalOpen - a.totalOpen;
+      if (a.balance !== b.balance) return a.balance - b.balance;
       return a.name.localeCompare(b.name, "de");
     });
 
-    const totalOpenAmount = memberFinancials.reduce((sum, m) => sum + m.totalOpen, 0);
-    const totalOpenPenalties = memberFinancials.reduce((sum, m) => sum + m.openPenalties, 0);
+    const totalOpenAmount = r2(memberFinancials.reduce((sum, m) => sum + m.totalOpen, 0));
+    const totalOpenPenalties = r2(memberFinancials.reduce((sum, m) => sum + m.openPenalties, 0));
     const openMembershipCount = memberFinancials.filter((m) => m.membershipFee > 0 && m.membershipFeeStatus === "open").length;
+    const totalCredit = r2(memberFinancials.reduce((sum, m) => sum + Math.max(0, m.balance), 0));
 
     return {
       members: memberFinancials,
       totalOpenAmount,
       totalOpenPenalties,
       openMembershipCount,
+      fundTotal: r2(fundTotal),
+      totalCredit,
     };
   });
 
@@ -516,7 +531,8 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
     const { data: groupRounds } = await sb
       .from("rounds")
       .select("id, name, played_on")
-      .eq("group_id", data.groupId);
+      .eq("group_id", data.groupId)
+      .eq("status", "finished");
 
     const roundMap = new Map((groupRounds ?? []).map((r) => [r.id, r]));
     const roundIds = Array.from(roundMap.keys());
@@ -536,7 +552,8 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
       try {
         const { data: penalties, error: penaltiesError } = await sb
           .from("penalties")
-          .select("amount, code, created_at, round_id, round_players!inner(profile_id)")
+          .select("amount, code, created_at, penalty_date, round_id, round_players!inner(profile_id)")
+          .eq("group_id", data.groupId)
           .in("round_id", roundIds)
           .eq("round_players.profile_id", data.userId)
           .order("created_at", { ascending: false });
@@ -549,7 +566,7 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
               amount: Number(p.amount ?? 0),
               code: p.code,
               label,
-              date: p.created_at,
+              date: p.penalty_date ?? round?.played_on ?? p.created_at,
               roundName: round?.name ?? null,
               roundDate: round?.played_on ?? null,
             };

@@ -402,6 +402,7 @@ export type Database = {
           hole_number: number | null
           id: string
           is_automatic: boolean
+          penalty_date: string | null
           points: number
           round_id: string
           round_player_id: string
@@ -415,6 +416,7 @@ export type Database = {
           hole_number?: number | null
           id?: string
           is_automatic?: boolean
+          penalty_date?: string | null
           points?: number
           round_id: string
           round_player_id: string
@@ -428,6 +430,7 @@ export type Database = {
           hole_number?: number | null
           id?: string
           is_automatic?: boolean
+          penalty_date?: string | null
           points?: number
           round_id?: string
           round_player_id?: string
