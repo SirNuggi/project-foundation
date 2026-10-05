@@ -14,6 +14,9 @@ export type UserGroup = {
   name: string;
 };
 
+/** Pseudo-Gruppe für Strafen ohne Gruppen-Zuordnung */
+export const OTHER_GROUP_ID = "other";
+
 export const getUserGroups = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -125,6 +128,32 @@ export const getHallOfShame = createServerFn({ method: "GET" })
   .inputValidator((input?: { groupId?: string }) => input)
   .handler(async ({ data: inputData, context }) => {
     const groupId = inputData?.groupId;
+
+    if (groupId === OTHER_GROUP_ID) {
+      // "Sonstige": Strafen ohne Gruppe des aktuellen Users aus beendeten Runden
+      const sb = context.supabase;
+      const { data: pen, error: penErr } = await sb
+        .from("penalties")
+        .select("amount, rounds!inner(status), round_players!inner(profile_id, profiles(id, display_name, handle))")
+        .is("group_id", null)
+        .eq("rounds.status", "finished")
+        .eq("round_players.profile_id", context.userId);
+      if (penErr) throw new Error(penErr.message);
+      const { data: me } = await sb
+        .from("profiles")
+        .select("id, display_name, handle")
+        .eq("id", context.userId)
+        .maybeSingle();
+      const euro = (pen ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      return [
+        {
+          id: context.userId,
+          name: me?.display_name || me?.handle || "Ich",
+          handle: me?.handle || "",
+          euro: Math.round(euro * 100) / 100,
+        },
+      ];
+    }
 
     if (groupId) {
       const sb = context.supabase;

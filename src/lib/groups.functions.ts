@@ -531,7 +531,8 @@ export const getMemberPaymentHistory = createServerFn({ method: "GET" })
     const { data: groupRounds } = await sb
       .from("rounds")
       .select("id, name, played_on")
-      .eq("group_id", data.groupId);
+      .eq("group_id", data.groupId)
+      .eq("status", "finished");
 
     const roundMap = new Map((groupRounds ?? []).map((r) => [r.id, r]));
     const roundIds = Array.from(roundMap.keys());
