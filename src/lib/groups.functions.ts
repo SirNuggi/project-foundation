@@ -347,7 +347,8 @@ export type MemberFinancials = {
   membershipFee: number;         // Gruppen-Mitgliedsbeitrag
   paidMembershipFee: number;     // Gezahlter Mitgliedsbeitrag
   membershipFeeStatus: "paid" | "open"; // "paid" wenn paidMembershipFee >= membershipFee
-  totalOpen: number;             // openPenalties + (membershipFeeStatus === "open" ? membershipFee : 0)
+  totalOpen: number;             // offener Betrag (0 bei Guthaben)
+  balance: number;               // Saldo: eingezahlt - geschuldet (positiv = Guthaben)
 };
 
 export type GroupFinancialOverview = {
@@ -355,6 +356,8 @@ export type GroupFinancialOverview = {
   totalOpenAmount: number;
   totalOpenPenalties: number;
   openMembershipCount: number;
+  fundTotal: number;             // Gesamtkasse: Summe aller Einzahlungen
+  totalCredit: number;           // Summe aller Guthaben
 };
 
 export const getGroupFinancialOverview = createServerFn({ method: "GET" })
