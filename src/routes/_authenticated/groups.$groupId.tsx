@@ -214,6 +214,7 @@ function GroupPage() {
       paidMembershipFee: 0,
       membershipFeeStatus: memFee > 0 ? "open" : "paid",
       totalOpen: memFee,
+      balance: -memFee,
     };
   });
 
@@ -407,6 +408,29 @@ function GroupPage() {
 
             {/* A. KPI-Übersichtskarten */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Gesamtkasse */}
+              <Card className="rounded-2xl border bg-card/80 shadow-none">
+                <CardHeader className="pb-1 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-semibold text-muted-foreground">
+                      Gesamtkasse
+                    </CardTitle>
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <div className="text-2xl font-black tracking-tight text-foreground">
+                    {formatCurrency(financialData?.fundTotal ?? 0)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Alle Einzahlungen
+                    {(financialData?.totalCredit ?? 0) > 0
+                      ? ` · davon ${formatCurrency(financialData!.totalCredit)} Guthaben`
+                      : ""}
+                  </p>
+                </CardContent>
+              </Card>
+
               {/* Gesamt ausstehender Betrag */}
               <Card className="rounded-2xl border bg-card/80 shadow-none">
                 <CardHeader className="pb-1 pt-4 px-4">

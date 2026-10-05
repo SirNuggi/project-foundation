@@ -178,13 +178,16 @@ export function MemberFinancialCard({
 
             {/* Saldo Badge */}
             <div className="text-right">
-              <span className="text-[11px] font-medium text-muted-foreground block">Offener Saldo</span>
+              <span className="text-[11px] font-medium text-muted-foreground block">
+                {member.balance > 0 ? "Guthaben" : member.balance < 0 ? "Offen" : "Saldo"}
+              </span>
               <span
                 className={`text-lg font-black tracking-tight ${
-                  member.totalOpen > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                  member.balance < 0 ? "text-destructive" : "text-primary"
                 }`}
               >
-                {formatCurrency(member.totalOpen)}
+                {member.balance > 0 ? "+" : ""}
+                {formatCurrency(member.balance)}
               </span>
             </div>
           </div>
@@ -284,9 +287,12 @@ export function MemberFinancialCard({
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-[10px]">Offener Saldo</p>
-                <p className={`font-black ${member.totalOpen > 0 ? "text-destructive" : "text-emerald-600"}`}>
-                  {formatCurrency(member.totalOpen)}
+                <p className="text-muted-foreground text-[10px]">
+                  {member.balance > 0 ? "Guthaben" : "Saldo"}
+                </p>
+                <p className={`font-black ${member.balance < 0 ? "text-destructive" : "text-primary"}`}>
+                  {member.balance > 0 ? "+" : ""}
+                  {formatCurrency(member.balance)}
                 </p>
               </div>
             </div>
