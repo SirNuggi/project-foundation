@@ -151,7 +151,7 @@ const courseFieldsSchema = z.object({
   name: z.string().trim().min(2).max(100),
   city: z.string().trim().max(80).optional(),
   holeCount: z.union([z.literal(9), z.literal(18)]),
-  teeBoxes: z.array(teeBoxSchema).min(1).max(6),
+  teeBoxes: z.array(teeBoxSchema).min(1).max(10),
   holes: z.array(holeSchema).max(18),
 });
 
