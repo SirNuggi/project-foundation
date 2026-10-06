@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Lock, Pencil, Trash2 } from "lucide-react";
+import { CourseCsvImport } from "@/components/course/CourseCsvImport";
 import {
   adminCreateCourse,
   adminDeleteCourse,
@@ -142,6 +143,11 @@ function AdminConsole() {
           setEditCourseId(null);
           await refresh();
         }}
+      />
+
+      <CourseCsvImport
+        existingCourses={(data?.courses ?? []).map((c) => ({ name: c.name, city: c.city ?? null }))}
+        onImported={refresh}
       />
 
       <PenaltyAmounts rules={data?.penaltyRules ?? []} onSaved={refresh} />

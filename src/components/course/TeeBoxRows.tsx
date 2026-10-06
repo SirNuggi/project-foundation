@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 
 export type TeeBoxDraft = { name: string; slope: string; cr: string };
 
-export const MAX_TEE_BOXES = 6;
+export const MAX_TEE_BOXES = 10;
 
 export function defaultTeeBoxDrafts(): TeeBoxDraft[] {
   return [
