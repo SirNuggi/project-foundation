@@ -259,6 +259,25 @@ function RoundPage() {
     return { strokes: row?.strokes ?? 0, putts: row?.putts ?? 0 };
   }
 
+  const missingByPlayer = (() => {
+    if (!board?.myFlightId) return [] as { id: string; name: string; holes: number[] }[];
+    return board.players
+      .filter((p) => p.flightId === board.myFlightId)
+      .map((p) => {
+        const holes: number[] = [];
+        for (let h = 1; h <= board.holeCount; h++) {
+          const d = drafts[`${p.id}-${h}`];
+          const row = board.scores.find(
+            (s) => s.round_player_id === p.id && s.hole_number === h,
+          );
+          const strokes = d?.strokes ?? row?.strokes ?? 0;
+          if (!strokes || strokes < 1) holes.push(h);
+        }
+        return { id: p.id, name: p.name, holes };
+      })
+      .filter((x) => x.holes.length > 0);
+  })();
+
 
   function ruleAmount(code: string) {
     return Number(board?.rules.find((r) => r.code === code)?.amount ?? 0);
@@ -777,14 +796,58 @@ function RoundPage() {
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Flight beenden?</DialogTitle>
+            <DialogTitle>
+              {missingByPlayer.length > 0 ? "Noch nicht alle Scores eingetragen" : "Flight beenden?"}
+            </DialogTitle>
             <DialogDescription>
-              Speichern beendet deinen Flight. Sobald alle Flights beendet sind, wird die gesamte
-              Runde archiviert. Löschen verwirft nur diesen Flight samt seinen Eingaben.
+              {missingByPlayer.length > 0
+                ? "Bei folgenden Spielern fehlen noch Löcher. Willst du den Flight trotzdem beenden?"
+                : "Speichern beendet deinen Flight. Sobald alle Flights beendet sind, wird die gesamte Runde archiviert. Löschen verwirft nur diesen Flight samt seinen Eingaben."}
             </DialogDescription>
           </DialogHeader>
+          {missingByPlayer.length > 0 && (
+            <div className="max-h-[45vh] space-y-2 overflow-y-auto">
+              {missingByPlayer.map((m) => (
+                <div key={m.id} className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-black">{m.name}</p>
+                    <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-bold text-destructive">
+                      {m.holes.length} fehlen
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {m.holes.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => {
+                          setHole(h);
+                          setFinishOpen(false);
+                        }}
+                        className="flex h-8 min-w-8 items-center justify-center rounded-full border border-destructive/40 bg-background px-2 text-xs font-bold text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground"
+                        aria-label={`Zu Loch ${h} springen`}
+                      >
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">Tippe auf ein Loch, um direkt dorthin zu springen.</p>
+            </div>
+          )}
           <DialogFooter className="flex-col gap-2 sm:flex-col">
+            {missingByPlayer.length > 0 && (
+              <Button
+                className="h-13 w-full font-bold"
+                disabled={busy}
+                onClick={() => setFinishOpen(false)}
+              >
+                Abbrechen & kontrollieren
+              </Button>
+            )}
             <Button
+              variant={missingByPlayer.length > 0 ? "outline" : "default"}
               className="h-13 w-full font-bold"
               disabled={busy || !board?.myFlightId}
               onClick={async () => {
@@ -804,7 +867,7 @@ function RoundPage() {
                 }
               }}
             >
-              Speichern
+              {missingByPlayer.length > 0 ? "Trotzdem beenden" : "Speichern"}
             </Button>
             {canDeleteFlight && !finished && (
               <Button
