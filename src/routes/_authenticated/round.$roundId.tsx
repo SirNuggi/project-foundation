@@ -13,6 +13,7 @@ import {
   deleteFlight,
   finishFlight,
   getRoundBoard,
+  saveExtendedStats,
   saveHoleScore,
   searchPlayers,
   toggleGirly,

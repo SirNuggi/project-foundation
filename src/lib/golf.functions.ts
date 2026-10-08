@@ -807,6 +807,38 @@ export const saveHoleScore = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const saveExtendedStats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        roundId: z.string().uuid(),
+        roundPlayerId: z.string().uuid(),
+        holeNumber: z.number().int().min(1).max(18),
+        teeDirection: z.enum(["left", "hit", "right", "short"]).nullable().optional(),
+        sandShots: z.number().int().min(0).max(10).optional(),
+        penaltyStrokes: z.number().int().min(0).max(10).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { error } = await sb.from("hole_scores").upsert(
+      {
+        round_id: data.roundId,
+        round_player_id: data.roundPlayerId,
+        hole_number: data.holeNumber,
+        // Only update the extended stats fields
+        tee_direction: data.teeDirection ?? null,
+        sand_shots: data.sandShots ?? 0,
+        penalty_strokes: data.penaltyStrokes ?? 0,
+      },
+      { onConflict: "round_player_id,hole_number" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const toggleGirly = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
