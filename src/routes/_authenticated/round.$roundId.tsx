@@ -851,35 +851,6 @@ function RoundPage() {
                                       </div>
                                     </div>
               
-                                    {/* Speichern-Button */}
-                                    <Button
-                                      type="button"
-                                      className="h-12 w-full font-bold"
-                                      disabled={!viewingOwnFlight || activeFlightFinished}
-                                      onClick={async () => {
-                                        try {
-                                          await saveScore({
-                                            data: {
-                                              roundId,
-                                              roundPlayerId: p.id,
-                                              holeNumber: hole,
-                                              par,
-                                              strokes: s.strokes,
-                                              putts: s.putts,
-                                              teeDirection,
-                                              sandShots,
-                                              penaltyStrokes,
-                                            },
-                                          });
-                                          await queryClient.invalidateQueries({ queryKey: ["round-board", roundId] });
-                                          toast.success("Erweiterte Statistiken gespeichert");
-                                        } catch (err) {
-                                          toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
-                                        }
-                                      }}
-                                    >
-                                      Erweiterte Statistiken speichern
-                                    </Button>
                                   </CollapsibleContent>
                                 </Collapsible>
                               </div>
