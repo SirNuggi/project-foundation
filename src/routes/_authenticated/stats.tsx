@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Coins, Crown, Flag, MapPin, Trophy } from "lucide-react";
-import { getHallOfShame, getMyStats, getUserGroups, OTHER_GROUP_ID, type UserGroup } from "@/lib/stats.functions";
+import { getHallOfShame, getMyStats, getMyGolfStatistics, getUserGroups, OTHER_GROUP_ID, type UserGroup } from "@/lib/stats.functions";
+import { GolfPerformance } from "@/components/stats/GolfPerformance";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import {
   Select,
@@ -15,6 +16,7 @@ import {
 const eur = new Intl.NumberFormat("de-AT", { style: "currency", currency: "EUR" });
 
 const myStatsQuery = () => queryOptions({ queryKey: ["my-stats"], queryFn: () => getMyStats() });
+const golfStatsQuery = () => queryOptions({ queryKey: ["my-golf-statistics"], queryFn: () => getMyGolfStatistics() });
 const userGroupsQuery = () =>
   queryOptions({ queryKey: ["user-groups"], queryFn: () => getUserGroups() });
 const hallQuery = (groupId?: string) =>
@@ -29,10 +31,10 @@ export const Route = createFileRoute("/_authenticated/stats")({
       { title: "Statistiken — Birdie Battle" },
       {
         name: "description",
-        content: "Deine Langzeitstatistiken, die Strafkassen-Rangliste und alle beendeten Runden.",
+        content: "GIR, Abschlagverteilung, Putts-Trend und Strafkassenstatistiken deiner beendeten Golfrunden.",
       },
       { property: "og:title", content: "Statistiken — Birdie Battle" },
-      { property: "og:description", content: "Strafkasse, Hall of Shame und deine Rundenhistorie." },
+      { property: "og:description", content: "Dein Golfspiel im Blick: GIR, Driving Accuracy, Putts und Rundenhistorie." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -40,6 +42,7 @@ export const Route = createFileRoute("/_authenticated/stats")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(myStatsQuery()),
+      context.queryClient.ensureQueryData(golfStatsQuery()),
       context.queryClient.ensureQueryData(userGroupsQuery()),
     ]);
     const groups = context.queryClient.getQueryData<UserGroup[]>(["user-groups"]);
@@ -72,6 +75,7 @@ export const Route = createFileRoute("/_authenticated/stats")({
 
 function StatsPage() {
   const { data: stats } = useSuspenseQuery(myStatsQuery());
+  const { data: golfStats } = useSuspenseQuery(golfStatsQuery());
   const { data: userGroups } = useSuspenseQuery(userGroupsQuery());
 
   const hasGroups = userGroups.length > 0;
@@ -114,6 +118,8 @@ function StatsPage() {
           }
         />
       </section>
+
+      <GolfPerformance stats={golfStats} />
 
       {hasGroups && (
         <section className="px-6 pt-10">
