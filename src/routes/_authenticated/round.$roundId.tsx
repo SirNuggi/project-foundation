@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Flag, LayoutDashboard, MapPin, Minus, MoreVertical, Plus, Search, Sun, SunDim, Table2, Trash2, UserPlus, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3, Flag, LayoutDashboard, MapPin, Minus, MoreVertical, Plus, Search, Sun, SunDim, Table2, Trash2, UserPlus, X } from "lucide-react";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 const LiveMap = lazy(() => import("@/components/round/LiveMap"));
@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LiveLeaderboard, type BoardRow } from "@/components/round/LiveLeaderboard";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +63,7 @@ function Counter({
   min,
   zeroPlus,
   zeroMinus,
+  max,
 }: {
   label: string;
   value: number;
@@ -69,6 +72,7 @@ function Counter({
   min: number;
   zeroPlus?: number;
   zeroMinus?: number;
+  max?: number;
 }) {
   return (
     <div className="min-w-0 flex-1">
@@ -87,14 +91,14 @@ function Counter({
         </button>
         <span className="min-w-0 flex-1 text-center text-2xl font-black tabular-nums">{value}</span>
         <button
-          type="button"
-          aria-label={`${label} erhöhen`}
-          disabled={disabled}
-          onClick={() => onChange(value === 0 && zeroPlus != null ? zeroPlus : value + 1)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground active:scale-95 disabled:opacity-30"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
+                  type="button"
+                  aria-label={`${label} erhöhen`}
+                  disabled={disabled || (max != null && value >= max)}
+                  onClick={() => onChange(value === 0 && zeroPlus != null ? zeroPlus : value + 1)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground active:scale-95 disabled:opacity-30"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
       </div>
     </div>
   );
@@ -119,6 +123,10 @@ function RoundPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [guest, setGuest] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [teeDirection, setTeeDirection] = useState<string | null>(null);
+  const [sandShots, setSandShots] = useState(0);
+  const [penaltyStrokes, setPenaltyStrokes] = useState(0);
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { strokes: number; putts: number }>>({});
   const [mapOpen, setMapOpen] = useState(false);
@@ -305,6 +313,9 @@ function RoundPage() {
             par,
             strokes: next.strokes,
             putts: next.putts,
+            teeDirection: playerId === board?.myRoundPlayerId ? teeDirection : null,
+            sandShots: playerId === board?.myRoundPlayerId ? sandShots : 0,
+            penaltyStrokes: playerId === board?.myRoundPlayerId ? penaltyStrokes : 0,
           },
         });
         await queryClient.invalidateQueries({ queryKey: ["round-board", roundId] });
@@ -645,23 +656,198 @@ function RoundPage() {
               )}
 
               <div className="mt-4 flex gap-4">
-                <Counter
-                  label="Schläge"
-                  value={s.strokes}
-                  min={0}
-                  zeroPlus={par}
-                  zeroMinus={par - 1}
-                  disabled={!viewingOwnFlight || activeFlightFinished}
-                  onChange={(v) => update(p.id, { ...s, strokes: v })}
-                />
-                <Counter
-                  label="Putts"
-                  value={s.putts}
-                  min={0}
-                  disabled={!viewingOwnFlight || activeFlightFinished}
-                  onChange={(v) => update(p.id, { ...s, putts: v })}
-                />
-              </div>
+                              <Counter
+                                label="Schläge"
+                                value={s.strokes}
+                                min={0}
+                                zeroPlus={par}
+                                zeroMinus={par - 1}
+                                disabled={!viewingOwnFlight || activeFlightFinished}
+                                onChange={(v) => update(p.id, { ...s, strokes: v })}
+                              />
+                              <Counter
+                                label="Putts"
+                                value={s.putts}
+                                min={0}
+                                disabled={!viewingOwnFlight || activeFlightFinished}
+                                onChange={(v) => update(p.id, { ...s, putts: v })}
+                              />
+                            </div>
+              
+                            {/* Erweiterte Statistiken nur für den eigenen Spieler */}
+                            {viewingOwnFlight && p.id === board?.myRoundPlayerId && (
+                              <div className="mt-4 border-t border-border pt-4">
+                                <Collapsible open={expanded} onOpenChange={setExpanded} className="w-full">
+                                  <CollapsibleTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-center justify-between rounded-lg bg-muted/50 p-3 text-sm font-medium transition-colors hover:bg-muted"
+                                      disabled={!viewingOwnFlight || activeFlightFinished}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <ArrowDown className="h-4 w-4" />
+                                        Erweiterte Statistiken
+                                      </span>
+                                      {expanded ? (
+                                        <ChevronUp className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronDown className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="mt-3 space-y-4">
+                                    {/* Abschlagrichtung */}
+                                    <div>
+                                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                        Abschlagrichtung
+                                      </p>
+                                      <div className="grid grid-cols-4 gap-2">
+                                        {[
+                                          { icon: ArrowLeft, value: "left", label: "Links" },
+                                          { icon: ArrowUp, value: "hit", label: "Mitte" },
+                                          { icon: ArrowRight, value: "right", label: "Rechts" },
+                                          { icon: ArrowDown, value: "short", label: "Kurz" },
+                                        ].map(({ icon: Icon, value, label }) => (
+                                          <button
+                                            key={value}
+                                            type="button"
+                                            onClick={() => setTeeDirection(value)}
+                                            className={`flex flex-col items-center gap-1 rounded-lg border p-2 transition-all ${
+                                              teeDirection === value
+                                                ? "border-primary bg-primary/10"
+                                                : "border-border hover:bg-muted"
+                                            }`}
+                                          >
+                                            <Icon className="h-5 w-5" />
+                                            <span className="text-xs font-medium">{label}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+              
+                                    {/* Manuelle Zähler */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                          Bunkerschläge
+                                        </p>
+                                        <Counter
+                                          label=""
+                                          value={sandShots}
+                                          min={0}
+                                          max={10}
+                                          disabled={!viewingOwnFlight || activeFlightFinished}
+                                          onChange={(v) => setSandShots(v)}
+                                        />
+                                      </div>
+                                      <div>
+                                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                          Strafschläge
+                                        </p>
+                                        <Counter
+                                          label=""
+                                          value={penaltyStrokes}
+                                          min={0}
+                                          max={10}
+                                          disabled={!viewingOwnFlight || activeFlightFinished}
+                                          onChange={(v) => setPenaltyStrokes(v)}
+                                        />
+                                      </div>
+                                    </div>
+              
+                                    {/* Echtzeit-Badges */}
+                                    <div>
+                                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                        Live-Badges
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {/* GIR Badge */}
+                                        {(() => {
+                                          const gir = s.strokes - s.putts <= par - 2;
+                                          return (
+                                            <Badge
+                                              variant={gir ? "default" : "outline"}
+                                              className="text-xs"
+                                            >
+                                              GIR {gir ? "✓" : "✗"}
+                                            </Badge>
+                                          );
+                                        })()}
+              
+                                        {/* FIR Badge */}
+                                        {(() => {
+                                          const fir = par >= 4 && teeDirection === "hit";
+                                          return (
+                                            <Badge
+                                              variant={fir ? "default" : "outline"}
+                                              className="text-xs"
+                                            >
+                                              FIR {fir ? "✓" : "✗"}
+                                            </Badge>
+                                          );
+                                        })()}
+              
+                                        {/* Sand Save Badge */}
+                                        {(() => {
+                                          const sandSave = sandShots > 0 && s.strokes <= par;
+                                          return (
+                                            <Badge
+                                              variant={sandSave ? "default" : "outline"}
+                                              className="text-xs"
+                                            >
+                                              Sand Save {sandSave ? "✓" : "✗"}
+                                            </Badge>
+                                          );
+                                        })()}
+              
+                                        {/* Up & Down Badge */}
+                                        {(() => {
+                                          const upAndDown = !(s.strokes - s.putts <= par - 2) && s.strokes <= par && s.putts <= 1;
+                                          return (
+                                            <Badge
+                                              variant={upAndDown ? "default" : "outline"}
+                                              className="text-xs"
+                                            >
+                                              Up & Down {upAndDown ? "✓" : "✗"}
+                                            </Badge>
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+              
+                                    {/* Speichern-Button */}
+                                    <Button
+                                      type="button"
+                                      className="h-12 w-full font-bold"
+                                      disabled={!viewingOwnFlight || activeFlightFinished}
+                                      onClick={async () => {
+                                        try {
+                                          await saveScore({
+                                            data: {
+                                              roundId,
+                                              roundPlayerId: p.id,
+                                              holeNumber: hole,
+                                              par,
+                                              strokes: s.strokes,
+                                              putts: s.putts,
+                                              teeDirection,
+                                              sandShots,
+                                              penaltyStrokes,
+                                            },
+                                          });
+                                          await queryClient.invalidateQueries({ queryKey: ["round-board", roundId] });
+                                          toast.success("Erweiterte Statistiken gespeichert");
+                                        } catch (err) {
+                                          toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+                                        }
+                                      }}
+                                    >
+                                      Erweiterte Statistiken speichern
+                                    </Button>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              </div>
+                            )}
             </div>
           );
         })}

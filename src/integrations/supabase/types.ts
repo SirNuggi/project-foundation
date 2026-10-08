@@ -342,56 +342,65 @@ export type Database = {
         ]
       }
       hole_scores: {
-        Row: {
-          created_at: string
-          hole_number: number
-          id: string
-          par: number
-          putts: number | null
-          round_id: string
-          round_player_id: string
-          strokes: number | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          hole_number: number
-          id?: string
-          par?: number
-          putts?: number | null
-          round_id: string
-          round_player_id: string
-          strokes?: number | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          hole_number?: number
-          id?: string
-          par?: number
-          putts?: number | null
-          round_id?: string
-          round_player_id?: string
-          strokes?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hole_scores_round_id_fkey"
-            columns: ["round_id"]
-            isOneToOne: false
-            referencedRelation: "rounds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hole_scores_round_player_id_fkey"
-            columns: ["round_player_id"]
-            isOneToOne: false
-            referencedRelation: "round_players"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+              Row: {
+                created_at: string
+                hole_number: number
+                id: string
+                par: number
+                penalty_strokes: number
+                putts: number | null
+                round_id: string
+                round_player_id: string
+                sand_shots: number
+                strokes: number | null
+                tee_direction: string | null
+                updated_at: string
+              }
+              Insert: {
+                created_at?: string
+                hole_number: number
+                id?: string
+                par?: number
+                penalty_strokes?: number
+                putts?: number | null
+                round_id: string
+                round_player_id: string
+                sand_shots?: number
+                strokes?: number | null
+                tee_direction?: string | null
+                updated_at?: string
+              }
+              Update: {
+                created_at?: string
+                hole_number?: number
+                id?: string
+                par?: number
+                penalty_strokes?: number
+                putts?: number | null
+                round_id?: string
+                round_player_id?: string
+                sand_shots?: number
+                strokes?: number | null
+                tee_direction?: string | null
+                updated_at?: string
+              }
+              Relationships: [
+                {
+                  foreignKeyName: "hole_scores_round_id_fkey"
+                  columns: ["round_id"]
+                  isOneToOne: false
+                  referencedRelation: "rounds"
+                  referencedColumns: ["id"]
+                },
+                {
+                  foreignKeyName: "hole_scores_round_player_id_fkey"
+                  columns: ["round_player_id"]
+                  isOneToOne: false
+                  referencedRelation: "round_players"
+                  referencedColumns: ["id"]
+                },
+              ]
+            }
       penalties: {
         Row: {
           amount: number

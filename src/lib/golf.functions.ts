@@ -762,6 +762,9 @@ export const saveHoleScore = createServerFn({ method: "POST" })
         par: z.number().int().min(3).max(6),
         strokes: z.number().int().min(1).max(20),
         putts: z.number().int().min(0).max(15),
+        teeDirection: z.enum(["left", "hit", "right", "short"]).nullable().optional(),
+        sandShots: z.number().int().min(0).max(10).optional(),
+        penaltyStrokes: z.number().int().min(0).max(10).optional(),
       })
       .parse(input),
   )
@@ -775,6 +778,9 @@ export const saveHoleScore = createServerFn({ method: "POST" })
         par: data.par,
         strokes: data.strokes,
         putts: data.putts,
+        tee_direction: data.teeDirection ?? null,
+        sand_shots: data.sandShots ?? 0,
+        penalty_strokes: data.penaltyStrokes ?? 0,
       },
       { onConflict: "round_player_id,hole_number" },
     );
