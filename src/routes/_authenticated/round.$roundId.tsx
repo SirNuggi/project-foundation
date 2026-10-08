@@ -339,6 +339,41 @@ function RoundPage() {
     }, 500);
   }
 
+  function saveExtras(next: { teeDirection: string | null; sandShots: number; penaltyStrokes: number }) {
+    setTeeDirection(next.teeDirection);
+    setSandShots(next.sandShots);
+    setPenaltyStrokes(next.penaltyStrokes);
+    const me = board?.myRoundPlayerId;
+    if (!me) return;
+    const key = `${me}-${hole}`;
+    const myScore = board?.scores.find((x) => x.round_player_id === me && x.hole_number === hole);
+    const strokes = drafts[key]?.strokes ?? myScore?.strokes ?? 0;
+    const putts = drafts[key]?.putts ?? myScore?.putts ?? 0;
+    if (timers.current[key]) clearTimeout(timers.current[key]);
+    // Ohne Schläge wird noch nichts gespeichert – die Werte gehen mit dem ersten Schlag mit
+    if (strokes < 1) return;
+    timers.current[key] = setTimeout(async () => {
+      try {
+        await saveScore({
+          data: {
+            roundId,
+            roundPlayerId: me,
+            holeNumber: hole,
+            par,
+            strokes,
+            putts,
+            teeDirection: next.teeDirection as "left" | "hit" | "right" | "short" | null,
+            sandShots: next.sandShots,
+            penaltyStrokes: next.penaltyStrokes,
+          },
+        });
+        await queryClient.invalidateQueries({ queryKey: ["round-board", roundId] });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+      }
+    }, 400);
+  }
+
   const rows: BoardRow[] = useMemo(() => {
     if (!board) return [];
     return board.players
@@ -725,7 +760,7 @@ function RoundPage() {
                                           <button
                                             key={value}
                                             type="button"
-                                            onClick={() => setTeeDirection(value)}
+                                            onClick={() => saveExtras({ teeDirection: teeDirection === value ? null : value, sandShots, penaltyStrokes })}
                                             className={`flex flex-col items-center gap-1 rounded-lg border p-2 transition-all ${
                                               teeDirection === value
                                                 ? "border-primary bg-primary/10"
@@ -751,7 +786,7 @@ function RoundPage() {
                                           min={0}
                                           max={10}
                                           disabled={!viewingOwnFlight || activeFlightFinished}
-                                          onChange={(v) => setSandShots(v)}
+                                          onChange={(v) => saveExtras({ teeDirection, sandShots: v, penaltyStrokes })}
                                         />
                                       </div>
                                       <div>
@@ -764,7 +799,7 @@ function RoundPage() {
                                           min={0}
                                           max={10}
                                           disabled={!viewingOwnFlight || activeFlightFinished}
-                                          onChange={(v) => setPenaltyStrokes(v)}
+                                          onChange={(v) => saveExtras({ teeDirection, sandShots, penaltyStrokes: v })}
                                         />
                                       </div>
                                     </div>
