@@ -176,11 +176,46 @@ function RoundPage() {
   }, [roundId, queryClient]);
 
   useEffect(() => {
-    const t = timers.current;
-    return () => {
-      Object.values(t).forEach(clearTimeout);
-    };
-  }, []);
+      const t = timers.current;
+      return () => {
+        Object.values(t).forEach(clearTimeout);
+      };
+    }, []);
+  
+    // Hole-Wechsel: erfasste erweitere Stats speichern (falls vorhanden) und Daten des neuen Lochs laden
+    useEffect(() => {
+      if (!board?.myRoundPlayerId) return;
+  
+      const myScores = board.scores.find(
+        (s) => s.round_player_id === board.myRoundPlayerId && s.hole_number === hole,
+      );
+      const draft = drafts[`${board.myRoundPlayerId}-${hole}`];
+      const strokes = draft?.strokes ?? myScores?.strokes ?? 0;
+  
+      // Werte speichern (falls nichts eingetragen → nichts, um Validierung zu umgehen)
+      if (strokes >= 1) {
+        void saveScore({
+          data: {
+            roundId,
+            roundPlayerId: board.myRoundPlayerId,
+            holeNumber: hole,
+            par,
+            strokes,
+            putts: draft?.putts ?? myScores?.putts ?? 0,
+            teeDirection,
+            sandShots,
+            penaltyStrokes,
+          },
+        }).catch((err) => {
+          toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+        });
+      }
+  
+      // Werte des neuen Lochs laden, sonst auf Defaults zurucksetzen
+      setTeeDirection(myScores?.tee_direction ?? null);
+      setSandShots(myScores?.sand_shots ?? 0);
+      setPenaltyStrokes(myScores?.penalty_strokes ?? 0);
+    }, [hole, board, teeDirection, sandShots, penaltyStrokes, drafts, saveScore]);
 
   useEffect(() => {
     if (!board?.flights.length) return;

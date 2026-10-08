@@ -493,23 +493,23 @@ export const getRoundBoard = createServerFn({ method: "GET" })
     if (!round) return null;
 
     const [holes, scores, penalties, globalRules, groupRules, group] = await Promise.all([
-      round.course_id
-        ? sb
-            .from("course_holes")
-            .select("hole_number, par, stroke_index, stroke_index_back")
-            .eq("course_id", round.course_id)
-        : Promise.resolve({
-            data: [] as {
-              hole_number: number;
-              par: number;
-              stroke_index: number | null;
-              stroke_index_back?: number | null;
-            }[],
-          }),
-      sb
-        .from("hole_scores")
-        .select("id, round_player_id, hole_number, strokes, putts")
-        .eq("round_id", data.roundId),
+          round.course_id
+            ? sb
+                .from("course_holes")
+                .select("hole_number, par, stroke_index, stroke_index_back")
+                .eq("course_id", round.course_id)
+            : Promise.resolve({
+                data: [] as {
+                  hole_number: number;
+                  par: number;
+                  stroke_index: number | null;
+                  stroke_index_back?: number | null;
+                }[],
+              }),
+          sb
+            .from("hole_scores")
+            .select("id, round_player_id, hole_number, strokes, putts, tee_direction, sand_shots, penalty_strokes")
+            .eq("round_id", data.roundId),
       sb
         .from("penalties")
         .select("id, round_player_id, hole_number, code, points, amount")
