@@ -110,8 +110,9 @@ function RoundPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchBoard = useServerFn(getRoundBoard);
-  const saveScore = useServerFn(saveHoleScore);
-  const setGirly = useServerFn(toggleGirly);
+    const saveScore = useServerFn(saveHoleScore);
+    const saveExtended = useServerFn(saveExtendedStats);
+    const setGirly = useServerFn(toggleGirly);
   const endFlight = useServerFn(finishFlight);
   const removeFlight = useServerFn(deleteFlight);
   const addToFlight = useServerFn(addPlayerToFlight);
