@@ -10,3 +10,6 @@
 <!-- LOVABLE:END -->
 
 - AI-Testlogin: Konto testuser@birdie.test (kein Admin), Zugangsdaten in Secrets TEST_USER/TEST_PASS; im Preview per /auth-Formular anmelden, da keine Sitzung injiziert wird (externes Supabase).
+- Personal golf aggregates use the pure calculator in src/lib/golf-statistics.ts with authenticated, user-scoped reads; this keeps rules independently testable without storing derived metrics.
+- Golf aggregates use the hole par saved on each score and exclude missing or invalid putting values; this preserves the played hole context and avoids treating absent data as successful GIRs.
+- Putts are averaged per recorded hole and trended over the latest twelve finished rounds; this makes rounds of different lengths comparable.

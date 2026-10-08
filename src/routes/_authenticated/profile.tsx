@@ -51,6 +51,8 @@ export const Route = createFileRoute("/_authenticated/profile")({
       { name: "description", content: "Dein Golfprofil mit Anzeigename, Handicap und Abschlag." },
       { property: "og:title", content: "Profil — Birdie Battle" },
       { property: "og:description", content: "Dein Golfprofil in Birdie Battle." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ProfilePage,

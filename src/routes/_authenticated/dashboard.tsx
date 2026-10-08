@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       },
       { property: "og:title", content: "Dashboard — Birdie Battle" },
       { property: "og:description", content: "Neue Runde starten oder Statistiken ansehen." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
