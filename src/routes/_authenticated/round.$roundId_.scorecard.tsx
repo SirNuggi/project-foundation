@@ -19,6 +19,8 @@ export const Route = createFileRoute("/_authenticated/round/$roundId_/scorecard"
         property: "og:description",
         content: "Komplette Scorecard mit Schlägen, Netto- und Bruttopunkten sowie Putts.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ScorecardPage,

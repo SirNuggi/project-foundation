@@ -36,6 +36,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { name: "description", content: "Golfplätze anlegen sowie Runden und Spieler verwalten." },
       { property: "og:title", content: "Admin — Birdie Battle" },
       { property: "og:description", content: "Plätze, Runden und Spieler verwalten." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AdminPage,

@@ -49,6 +49,8 @@ export const Route = createFileRoute("/_authenticated/round/$roundId")({
       { name: "description", content: "Live-Scoring mit Schlägen, Putts und Strafpunkten." },
       { property: "og:title", content: "Runde — Birdie Battle" },
       { property: "og:description", content: "Live-Scoring mit Schlägen, Putts und Strafpunkten." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: RoundPage,

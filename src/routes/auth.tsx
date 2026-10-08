@@ -18,6 +18,8 @@ export const Route = createFileRoute("/auth")({
       },
       { property: "og:title", content: "Anmelden — Birdie Battle" },
       { property: "og:description", content: "Anmelden und Golfrunden tracken." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,

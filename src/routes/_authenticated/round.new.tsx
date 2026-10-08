@@ -50,6 +50,8 @@ export const Route = createFileRoute("/_authenticated/round/new")({
       },
       { property: "og:title", content: "Neue Runde — Birdie Battle" },
       { property: "og:description", content: "Platz wählen, Mitspieler hinzufügen, losspielen." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewRound,
