@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { calculateGolfStatistics } from "@/lib/golf-statistics";
 
 export type StatsRound = {
   id: string;
@@ -121,6 +122,47 @@ export const getMyStats = createServerFn({ method: "GET" })
         .sort((a, b) => b.amount - a.amount),
       rounds,
     };
+  });
+
+export const getMyGolfStatistics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: entries, error } = await context.supabase
+      .from("round_players")
+      .select("id, profile_id, rounds!inner(id, course_name, played_on, hole_count, status)")
+      .eq("profile_id", context.userId)
+      .eq("rounds.status", "finished");
+    if (error) throw new Error(error.message);
+
+    const rounds = (entries ?? []).map((entry) => ({
+      playerId: entry.id,
+      profileId: entry.profile_id ?? "",
+      roundId: entry.rounds.id,
+      status: entry.rounds.status,
+      playedOn: entry.rounds.played_on,
+      courseName: entry.rounds.course_name,
+      holeCount: entry.rounds.hole_count,
+    }));
+
+    // Page explicitly: Supabase caps responses, which must not truncate long-term stats.
+    const scores: import("@/lib/golf-statistics").GolfStatsScore[] = [];
+    const playerIds = rounds.map((round) => round.playerId);
+    for (let chunk = 0; chunk < playerIds.length; chunk += 100) {
+      const ids = playerIds.slice(chunk, chunk + 100);
+      for (let offset = 0; ; offset += 500) {
+        const { data, error: scoreError } = await context.supabase
+          .from("hole_scores")
+          .select("round_player_id, hole_number, par, strokes, putts, tee_direction")
+          .in("round_player_id", ids)
+          .order("id")
+          .range(offset, offset + 499);
+        if (scoreError) throw new Error(scoreError.message);
+        scores.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+    }
+    // Use the hole par saved with each score, never a handicap-adjusted personal par.
+    return calculateGolfStatistics(context.userId, rounds, scores);
   });
 
 export const getHallOfShame = createServerFn({ method: "GET" })

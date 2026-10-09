@@ -49,6 +49,8 @@ export const Route = createFileRoute("/_authenticated/round/$roundId")({
       { name: "description", content: "Live-Scoring mit Schlägen, Putts und Strafpunkten." },
       { property: "og:title", content: "Runde — Birdie Battle" },
       { property: "og:description", content: "Live-Scoring mit Schlägen, Putts und Strafpunkten." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: RoundPage,
@@ -110,9 +112,9 @@ function RoundPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchBoard = useServerFn(getRoundBoard);
-    const saveScore = useServerFn(saveHoleScore);
-    const saveExtended = useServerFn(saveExtendedStats);
-    const setGirly = useServerFn(toggleGirly);
+  const saveScore = useServerFn(saveHoleScore);
+  const saveExtended = useServerFn(saveExtendedStats);
+  const setGirly = useServerFn(toggleGirly);
   const endFlight = useServerFn(finishFlight);
   const removeFlight = useServerFn(deleteFlight);
   const addToFlight = useServerFn(addPlayerToFlight);
@@ -183,41 +185,19 @@ function RoundPage() {
         Object.values(t).forEach(clearTimeout);
       };
     }, []);
-  
-    // Hole-Wechsel: erfasste erweitere Stats speichern (falls vorhanden) und Daten des neuen Lochs laden
-    useEffect(() => {
-      if (!board?.myRoundPlayerId) return;
 
-      const myScores = board.scores.find(
-        (s) => s.round_player_id === board.myRoundPlayerId && s.hole_number === hole,
-      );
-      const draft = drafts[`${board.myRoundPlayerId}-${hole}`];
-      const strokes = draft?.strokes ?? myScores?.strokes ?? 0;
-
-      // Werte speichern (falls nichts eingetragen → nichts, um Validierung zu umgehen)
-      if (strokes >= 1) {
-        void saveScore({
-          data: {
-            roundId,
-            roundPlayerId: board.myRoundPlayerId,
-            holeNumber: hole,
-            par,
-            strokes,
-            putts: draft?.putts ?? myScores?.putts ?? 0,
-            teeDirection,
-            sandShots,
-            penaltyStrokes,
-          },
-        }).catch((err) => {
-          toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
-        });
-      }
-
-      // Werte des neuen Lochs laden, sonst auf Defaults zurucksetzen
-      setTeeDirection(myScores?.tee_direction ?? null);
-      setSandShots(myScores?.sand_shots ?? 0);
-      setPenaltyStrokes(myScores?.penalty_strokes ?? 0);
-    }, [hole, board]);
+  // Nur bei Lochwechsel (oder erstem Laden) die erweiterten Werte des Lochs laden – nicht bei jedem Live-Update
+  const myRpId = board?.myRoundPlayerId ?? null;
+  useEffect(() => {
+    if (!board || !myRpId) return;
+    const myScores = board.scores.find(
+      (s) => s.round_player_id === myRpId && s.hole_number === hole,
+    );
+    setTeeDirection(myScores?.tee_direction ?? null);
+    setSandShots(myScores?.sand_shots ?? 0);
+    setPenaltyStrokes(myScores?.penalty_strokes ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hole, myRpId]);
 
   useEffect(() => {
     if (!board?.flights.length) return;
@@ -360,6 +340,41 @@ function RoundPage() {
         toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
       }
     }, 500);
+  }
+
+  function saveExtras(next: { teeDirection: string | null; sandShots: number; penaltyStrokes: number }) {
+    setTeeDirection(next.teeDirection);
+    setSandShots(next.sandShots);
+    setPenaltyStrokes(next.penaltyStrokes);
+    const me = board?.myRoundPlayerId;
+    if (!me) return;
+    const key = `${me}-${hole}`;
+    const myScore = board?.scores.find((x) => x.round_player_id === me && x.hole_number === hole);
+    const strokes = drafts[key]?.strokes ?? myScore?.strokes ?? 0;
+    const putts = drafts[key]?.putts ?? myScore?.putts ?? 0;
+    if (timers.current[key]) clearTimeout(timers.current[key]);
+    // Ohne Schläge wird noch nichts gespeichert – die Werte gehen mit dem ersten Schlag mit
+    if (strokes < 1) return;
+    timers.current[key] = setTimeout(async () => {
+      try {
+        await saveScore({
+          data: {
+            roundId,
+            roundPlayerId: me,
+            holeNumber: hole,
+            par,
+            strokes,
+            putts,
+            teeDirection: next.teeDirection as "left" | "hit" | "right" | "short" | null,
+            sandShots: next.sandShots,
+            penaltyStrokes: next.penaltyStrokes,
+          },
+        });
+        await queryClient.invalidateQueries({ queryKey: ["round-board", roundId] });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+      }
+    }, 400);
   }
 
   const rows: BoardRow[] = useMemo(() => {
@@ -642,7 +657,6 @@ function RoundPage() {
                 </span>
               </div>
 
-
               {board?.withPenalties && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span
@@ -748,7 +762,7 @@ function RoundPage() {
                                           <button
                                             key={value}
                                             type="button"
-                                            onClick={() => setTeeDirection(value)}
+                                            onClick={() => saveExtras({ teeDirection: teeDirection === value ? null : value, sandShots, penaltyStrokes })}
                                             className={`flex flex-col items-center gap-1 rounded-lg border p-2 transition-all ${
                                               teeDirection === value
                                                 ? "border-primary bg-primary/10"
@@ -774,7 +788,7 @@ function RoundPage() {
                                           min={0}
                                           max={10}
                                           disabled={!viewingOwnFlight || activeFlightFinished}
-                                          onChange={(v) => setSandShots(v)}
+                                          onChange={(v) => saveExtras({ teeDirection, sandShots: v, penaltyStrokes })}
                                         />
                                       </div>
                                       <div>
@@ -787,7 +801,7 @@ function RoundPage() {
                                           min={0}
                                           max={10}
                                           disabled={!viewingOwnFlight || activeFlightFinished}
-                                          onChange={(v) => setPenaltyStrokes(v)}
+                                          onChange={(v) => saveExtras({ teeDirection, sandShots, penaltyStrokes: v })}
                                         />
                                       </div>
                                     </div>
@@ -852,6 +866,7 @@ function RoundPage() {
                                       </div>
                                     </div>
               
+                                    {/* Collapsible Content End */}
                                   </CollapsibleContent>
                                 </Collapsible>
                               </div>
