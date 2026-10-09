@@ -8,6 +8,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, ChevronDown, C
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 const LiveMap = lazy(() => import("@/components/round/LiveMap"));
+import { GpsFloatingMenu } from "@/components/round/GpsFloatingMenu";
 import {
   addPlayerToFlight,
   deleteFlight,
@@ -134,6 +135,12 @@ function RoundPage() {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { strokes: number; putts: number }>>({});
   const [mapOpen, setMapOpen] = useState(false);
+  const [mapVisible, setMapVisible] = useState(false);
+  const [mapOpacity, setMapOpacity] = useState(0.85);
+  useEffect(() => {
+    const v = Number(localStorage.getItem("gps-map-opacity"));
+    if (v >= 0.3 && v <= 1) setMapOpacity(v);
+  }, []);
   const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -586,9 +593,13 @@ function RoundPage() {
 
           <button
             type="button"
-            aria-label="Live-Karte öffnen"
-            onClick={() => setMapOpen(true)}
-            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            aria-label={mapOpen ? "GPS-Menü ausblenden" : "GPS-Menü einblenden"}
+            aria-pressed={mapOpen}
+            onClick={() => {
+              setMapOpen((o) => !o);
+              setMapVisible(false);
+            }}
+            className={`ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${mapOpen ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-sidebar" : "bg-sidebar-accent text-primary"}`}
           >
             <MapPin className="h-5 w-5" />
           </button>
@@ -1136,30 +1147,34 @@ function RoundPage() {
 
       <LiveLeaderboard rows={rows} showPenalties={board?.withPenalties !== false} />
 
-      {mapOpen && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="absolute inset-0">
-            <ClientOnly fallback={null}>
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-sm font-bold text-muted-foreground">
-                    Karte wird geladen …
-                  </div>
-                }
-              >
-                <LiveMap />
-              </Suspense>
-            </ClientOnly>
-          </div>
-          <button
-            type="button"
-            aria-label="Karte schließen"
-            onClick={() => setMapOpen(false)}
-            className="absolute right-4 top-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg"
-          >
-            <X className="h-5 w-5" />
-          </button>
+      {mapOpen && mapVisible && (
+        <div
+          style={{ opacity: mapOpacity }}
+          className="fixed inset-2 z-40 overflow-hidden rounded-3xl border border-white/20 bg-background/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
+        >
+          <ClientOnly fallback={null}>
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-sm font-bold text-muted-foreground">
+                  Karte wird geladen …
+                </div>
+              }
+            >
+              <LiveMap />
+            </Suspense>
+          </ClientOnly>
         </div>
+      )}
+      {mapOpen && (
+        <GpsFloatingMenu
+          mapVisible={mapVisible}
+          onToggleMap={() => setMapVisible((v) => !v)}
+          opacity={mapOpacity}
+          onOpacityChange={(v) => {
+            setMapOpacity(v);
+            localStorage.setItem("gps-map-opacity", String(v));
+          }}
+        />
       )}
     </main>
   );
