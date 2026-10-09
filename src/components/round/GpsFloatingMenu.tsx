@@ -106,7 +106,7 @@ export function GpsFloatingMenu({
             max={100}
             step={1}
             value={[Math.round(opacity * 100)]}
-            onValueChange={(v) => onOpacityChange(v[0] / 100)}
+            onValueChange={(v) => onOpacityChange((v[0] ?? 85) / 100)}
           />
         </PopoverContent>
       </Popover>
