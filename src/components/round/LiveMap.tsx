@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import L from "leaflet";
 import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { ShotMapLayer } from "@/components/round/ShotMapLayer";
 
 const meIcon = L.divIcon({
   className: "",
@@ -55,7 +56,13 @@ function formatDistance(meters: number): string {
   return `${Math.round(meters)} m`;
 }
 
-export default function LiveMap() {
+interface LiveMapProps {
+  roundId: string;
+  holeNumber: number;
+  userId: string | null;
+}
+
+export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
@@ -96,6 +103,7 @@ export default function LiveMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <TargetPicker onPick={setTarget} />
+        {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
         {position && (
           <>
             <FollowPosition position={position} />

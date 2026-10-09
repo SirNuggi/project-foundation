@@ -1160,7 +1160,11 @@ function RoundPage() {
                 </div>
               }
             >
-              <LiveMap />
+              <LiveMap
+                roundId={roundId}
+                holeNumber={hole}
+                userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? null}
+              />
             </Suspense>
           </ClientOnly>
         </div>
