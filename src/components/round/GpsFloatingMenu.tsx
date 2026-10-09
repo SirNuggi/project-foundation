@@ -3,6 +3,7 @@ import { Map as MapIcon, SlidersHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { ShotTrackingMenu } from "@/components/round/ShotTrackingMenu";
 
 const POS_KEY = "gps-menu-pos";
 
@@ -11,11 +12,19 @@ export function GpsFloatingMenu({
   onToggleMap,
   opacity,
   onOpacityChange,
+  roundId,
+  holeNumber,
+  userId,
+  shotsDisabled,
 }: {
   mapVisible: boolean;
   onToggleMap: () => void;
   opacity: number;
   onOpacityChange: (v: number) => void;
+  roundId: string;
+  holeNumber: number;
+  userId: string | null;
+  shotsDisabled: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -40,6 +49,15 @@ export function GpsFloatingMenu({
     setPos(clamp(initial.x, initial.y));
   }, []);
 
+  const positioned = pos !== null;
+  useEffect(() => {
+    if (!positioned) return;
+    const adjust = () => setPos((current) => current ? clamp(current.x, current.y) : null);
+    adjust();
+    window.addEventListener("resize", adjust);
+    return () => window.removeEventListener("resize", adjust);
+  }, [positioned, userId]);
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (!pos) return;
     drag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, moved: false };
@@ -60,7 +78,7 @@ export function GpsFloatingMenu({
   return (
     <div
       ref={ref}
-      style={{ left: pos.x, top: pos.y, touchAction: "none" }}
+      style={{ left: pos.x, top: pos.y }}
       className="fixed z-50 flex items-center gap-1 rounded-full border border-border bg-secondary p-1.5 text-secondary-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-200"
     >
       <div
@@ -69,7 +87,7 @@ export function GpsFloatingMenu({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         aria-label="Menü verschieben"
-        className="flex h-11 w-5 cursor-grab flex-col items-center justify-center gap-1 active:cursor-grabbing"
+        className="flex h-11 w-5 touch-none cursor-grab flex-col items-center justify-center gap-1 active:cursor-grabbing"
       >
         {[0, 1, 2].map((i) => (
           <span key={i} className="h-1 w-1 rounded-full bg-secondary-foreground/50" />
@@ -110,6 +128,14 @@ export function GpsFloatingMenu({
           />
         </PopoverContent>
       </Popover>
+      {userId && (
+        <ShotTrackingMenu
+          roundId={roundId}
+          holeNumber={holeNumber}
+          userId={userId}
+          disabled={shotsDisabled}
+        />
+      )}
     </div>
   );
 }

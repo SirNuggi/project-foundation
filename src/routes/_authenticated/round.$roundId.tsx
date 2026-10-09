@@ -1167,6 +1167,10 @@ function RoundPage() {
       )}
       {mapOpen && (
         <GpsFloatingMenu
+          roundId={roundId}
+          holeNumber={hole}
+          userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? null}
+          shotsDisabled={finished || !board?.myRoundPlayerId}
           mapVisible={mapVisible}
           onToggleMap={() => setMapVisible((v) => !v)}
           opacity={mapOpacity}

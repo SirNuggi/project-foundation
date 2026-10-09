@@ -671,6 +671,60 @@ export type Database = {
           },
         ]
       }
+      shot_logs: {
+        Row: {
+          id: string
+          round_id: string
+          user_id: string
+          hole_number: number
+          shot_number: number
+          club_code: string
+          latitude: number
+          longitude: number
+          distance_meters: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          round_id: string
+          user_id: string
+          hole_number: number
+          shot_number: number
+          club_code: string
+          latitude: number
+          longitude: number
+          distance_meters?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          round_id?: string
+          user_id?: string
+          hole_number?: number
+          shot_number?: number
+          club_code?: string
+          latitude?: number
+          longitude?: number
+          distance_meters?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shot_logs_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shot_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rounds: {
         Row: {
           course_id: string | null
