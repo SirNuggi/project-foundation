@@ -16,7 +16,7 @@ export const bagCategories = [
 ] as const;
 export const standardClubs = [
   { club_code: "D", club_name: "Driver", category: "woods" },
-  ...[3, 5, 7].map((n) => ({ club_code: `H${n}`, club_name: `Holz ${n}`, category: "woods" })),
+  ...[3, 5, 7].map((n) => ({ club_code: `W${n}`, club_name: `Holz ${n}`, category: "woods" })),
   ...[2, 3, 4, 5].map((n) => ({ club_code: `H${n}`, club_name: `Hybrid ${n}`, category: "hybrids" })),
   ...[3, 4, 5, 6, 7, 8, 9].map((n) => ({ club_code: `I${n}`, club_name: `Eisen ${n}`, category: "irons" })),
   { club_code: "PW", club_name: "Pitching Wedge", category: "wedges" },
