@@ -71,6 +71,7 @@ interface LiveMapProps {
 }
 
 export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
+  const mapRef = useRef<L.Map | null>(null);
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
