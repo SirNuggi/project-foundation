@@ -75,6 +75,7 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
   const [target, setTarget] = useState<[number, number] | null>(null);
+  const [bearing, setBearing] = useState(0);
 
   useEffect(() => {
     if (!navigator.geolocation) {
