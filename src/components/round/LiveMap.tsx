@@ -51,10 +51,9 @@ function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
 }
 
 function BearingTracker({ onChange }: { onChange: (bearing: number) => void }) {
-  useMapEvents({
+  const map = useMapEvents({
     rotate() {
-      const map = useMapEvents.current;
-      onChange(map?.getBearing() ?? 0);
+      onChange(map.getBearing());
     },
   });
   return null;
