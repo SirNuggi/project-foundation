@@ -26,11 +26,14 @@ type Tab = "strokes" | "money" | "points";
 export function LiveLeaderboard({
   rows,
   showPenalties = true,
+  embedded = false,
 }: {
   rows: BoardRow[];
   showPenalties?: boolean;
+  embedded?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  const open = embedded || openState;
   const [tab, setTab] = useState<Tab>("strokes");
   const activeTab: Tab = tab === "money" && !showPenalties ? "strokes" : tab;
 
@@ -52,7 +55,7 @@ export function LiveLeaderboard({
   });
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
+    <div className={embedded ? "" : "fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur"}>
       <div className="flex items-center gap-2 px-6 py-3">
         <button
           type="button"
@@ -78,14 +81,14 @@ export function LiveLeaderboard({
           </Select>
         )}
 
-        <button
+        {!embedded && <button
           type="button"
           aria-label={open ? "Leaderboard einklappen" : "Leaderboard ausklappen"}
           onClick={() => setOpen((v) => !v)}
           className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center"
         >
           {open ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-        </button>
+        </button>}
       </div>
 
       {open && (

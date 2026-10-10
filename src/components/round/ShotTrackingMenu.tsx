@@ -1,10 +1,9 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Flag, Loader2, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { deleteLastShot, getHoleShots, logShot } from "@/lib/shots.functions";
 import { getMyBag } from "@/lib/bag.functions";
 import type { UserClub } from "@/lib/bag";
@@ -27,6 +26,7 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
     queryFn: () => fetchBag(),
   });
   const queryClient = useQueryClient();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const locked = useRef(false);
   const queryKey = ["hole-shots", roundId, userId, holeNumber];
@@ -88,62 +88,62 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="secondary" size="icon" aria-label="GPS-Schläge und Schlägerauswahl" className="h-11 w-11 rounded-full bg-sidebar-accent">
-          {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Flag className="h-5 w-5" />}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent side="top" sideOffset={12} collisionPadding={8} className="z-[1100] max-h-[70dvh] w-[min(22rem,calc(100vw-1rem))] overflow-y-auto rounded-2xl p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold">GPS-Schläge · Loch {holeNumber}</h2>
-            <p className="text-xs text-muted-foreground">Schläger antippen, Standort speichern</p>
+    <div className="relative px-4 pb-3 pt-3">
+      <button
+        type="button"
+        aria-label={historyOpen ? "Schlaghistorie einklappen" : "Schlaghistorie ausklappen"}
+        onClick={() => setHistoryOpen((v) => !v)}
+        className="absolute right-2 top-1 flex h-8 w-8 items-center justify-center text-muted-foreground"
+      >
+        {historyOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+      </button>
+      {historyOpen && (
+        <div className="mb-3 mr-8 border-b pb-3 animate-in fade-in slide-in-from-bottom-2 duration-200" aria-live="polite">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              {isPending ? <p className="text-xs text-muted-foreground">Schläge werden geladen …</p> : error ? (
+                <div className="text-xs text-destructive">Historie konnte nicht geladen werden.
+                  <Button variant="link" size="sm" onClick={() => void refetch()}>Erneut laden</Button>
+                </div>
+              ) : !shots.length ? <p className="text-xs text-muted-foreground">Noch keine Schläge auf Loch {holeNumber}.</p> : (
+                <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-xs">
+                  {shots.map((shot, index) => {
+                    const distance = shots[index + 1]?.distance_meters;
+                    return (
+                      <li key={shot.id}>
+                        <span title={shot.club_name ?? shot.club_code} className="inline-block rounded-md bg-muted px-2 py-1 font-medium">
+                          {shot.shot_number}. {shot.club_code}
+                          {distance != null && ` (${Math.round(distance)} m)`}
+                        </span>
+                        {index < shots.length - 1 && <span className="ml-1.5 text-muted-foreground" aria-hidden="true">→</span>}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
+            <Button variant="outline" size="sm" aria-label="Letzten Schlag entfernen" disabled={disabled || !!pending || !shots.length || !!error || isPending} onClick={() => void undo()} className="h-8 shrink-0 gap-1 px-2 text-xs">
+              {pending === "undo" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+              Rückgängig
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" aria-label="Letzten Schlag entfernen" title="Letzten Schlag entfernen" disabled={disabled || !!pending || !shots.length || !!error || isPending} onClick={() => void undo()} className="h-11 w-11 shrink-0">
-            {pending === "undo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-          </Button>
         </div>
+      )}
+      <div className="mr-8">
         {bagPending ? <p className="text-xs text-muted-foreground">Golfbag wird geladen …</p> : bagError ? (
           <div className="text-xs text-destructive">Golfbag konnte nicht geladen werden.
             <Button variant="link" size="sm" onClick={() => void refetchBag()}>Erneut laden</Button>
           </div>
         ) : !bag.length ? <p className="text-xs text-muted-foreground">Dein Golfbag ist leer. Füge im Profil Schläger hinzu.</p> : (
-          <div className="grid grid-cols-5 gap-1.5" aria-label="Schläger aus meinem Golfbag">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(2.6rem,1fr))] gap-1" aria-label="Schläger aus meinem Golfbag">
             {bag.map((club) => (
-              <Button key={club.id} variant="outline" aria-label={`${club.club_name}: Schlag erfassen`} title={club.club_name} disabled={disabled || !!pending || isPending || !!error} onClick={() => void capture(club)} className="h-11 px-0 font-bold transition-transform active:scale-95">
-                {pending === club.id ? <Loader2 className="h-4 w-4 animate-spin" /> : club.club_code}
+              <Button key={club.id} variant="outline" aria-label={`${club.club_name}: Schlag erfassen`} title={club.club_name} disabled={disabled || !!pending || isPending || !!error} onClick={() => void capture(club)} className="h-9 px-0 text-xs font-bold transition-transform active:scale-95">
+                {pending === club.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : club.club_code}
               </Button>
             ))}
           </div>
         )}
-        <div className="mt-3 border-t pt-3" aria-live="polite" aria-busy={!!pending}>
-          {pending && <p className="mb-2 text-xs text-muted-foreground">{pending === "undo" ? "Schlag wird entfernt …" : "GPS-Position wird ermittelt und gespeichert …"}</p>}
-          {isPending ? <p className="text-xs text-muted-foreground">Schläge werden geladen …</p> : error ? (
-            <div className="text-xs text-destructive">Historie konnte nicht geladen werden.
-              <Button variant="link" size="sm" onClick={() => void refetch()}>Erneut laden</Button>
-            </div>
-          ) : !shots.length ? <p className="text-xs text-muted-foreground">Noch keine Schläge auf diesem Loch.</p> : (
-            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-xs">
-              {shots.map((shot, index) => {
-                // Die am Folgeschlag gespeicherte Distanz gehört zur Länge dieses Schlags.
-                const distance = shots[index + 1]?.distance_meters;
-                return (
-                  <li key={shot.id} className="animate-in fade-in duration-200">
-                    <span title={shot.club_name ?? shot.club_code} className="inline-block rounded-md bg-muted px-2 py-1.5 font-medium">
-                      {shot.shot_number}. {shot.club_code}
-                      {distance != null && ` (${Math.round(distance)} m)`}
-                    </span>
-                    {index < shots.length - 1 && <span className="ml-1.5 text-muted-foreground" aria-hidden="true">→</span>}
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Distanzen erscheinen nach dem nächsten Schlag. GPS-Schläge ändern die Scorekarte nicht.</p>
-          {disabled && <p className="mt-2 text-xs text-muted-foreground">Für diese Runde ist die Erfassung nicht verfügbar.</p>}
-        </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 }
