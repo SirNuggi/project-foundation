@@ -149,6 +149,20 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
         )}
       </MapContainer>
 
+      {Math.abs(bearing) > 0.5 && (
+        <button
+          type="button"
+          aria-label="Karte nach Norden ausrichten"
+          onClick={() => {
+            const map = mapRef.current;
+            if (map) map.setBearing(0);
+          }}
+          className="absolute right-4 top-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg"
+        >
+          <Compass className="h-5 w-5" style={{ transform: `rotate(${-bearing}deg)` }} />
+        </button>
+      )}
+
       {target && (
         <button
           type="button"
