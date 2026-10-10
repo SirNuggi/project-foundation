@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Compass } from "lucide-react";
 import L from "leaflet";
+import "leaflet-rotate";
 import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { ShotMapLayer } from "@/components/round/ShotMapLayer";
 
