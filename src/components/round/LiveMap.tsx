@@ -106,11 +106,16 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
         zoom={position ? 17 : 13}
         className="h-full w-full"
         zoomControl={false}
+        rotate
+        touchRotate
+        rotateControl={false}
+        bearing={0}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <BearingTracker onChange={setBearing} />
         <TargetPicker onPick={setTarget} />
         {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
         {position && (
