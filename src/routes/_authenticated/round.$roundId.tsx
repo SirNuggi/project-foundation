@@ -4,11 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3, Flag, LayoutDashboard, MapPin, Minus, MoreVertical, Plus, Search, Sun, SunDim, Table2, Trash2, UserPlus, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CalendarDays, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock3, Flag, LayoutDashboard, MapPin, Minus, MoreVertical, Plus, Search, Sun, SunDim, Table2, Target, Trash2, Trophy, UserPlus, X } from "lucide-react";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 const LiveMap = lazy(() => import("@/components/round/LiveMap"));
-import { GpsFloatingMenu } from "@/components/round/GpsFloatingMenu";
+import { ShotTrackingMenu } from "@/components/round/ShotTrackingMenu";
 import {
   addPlayerToFlight,
   deleteFlight,
@@ -135,12 +135,7 @@ function RoundPage() {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { strokes: number; putts: number }>>({});
   const [mapOpen, setMapOpen] = useState(false);
-  const [mapVisible, setMapVisible] = useState(false);
-  const [mapOpacity, setMapOpacity] = useState(0.85);
-  useEffect(() => {
-    const v = Number(localStorage.getItem("gps-map-opacity"));
-    if (v >= 0.3 && v <= 1) setMapOpacity(v);
-  }, []);
+  const [bottomPanel, setBottomPanel] = useState<"leaderboard" | "shots" | null>(null);
   const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -593,13 +588,10 @@ function RoundPage() {
 
           <button
             type="button"
-            aria-label={mapOpen ? "GPS-Menü ausblenden" : "GPS-Menü einblenden"}
+            aria-label={mapOpen ? "Karte ausblenden" : "Karte einblenden"}
             aria-pressed={mapOpen}
-            onClick={() => {
-              setMapOpen((o) => !o);
-              setMapVisible(false);
-            }}
-            className={`ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${mapOpen ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-sidebar" : "bg-sidebar-accent text-primary"}`}
+            onClick={() => setMapOpen((o) => !o)}
+            className={`ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${mapOpen ? "bg-primary text-primary-foreground" : "bg-sidebar-accent text-primary"}`}
           >
             <MapPin className="h-5 w-5" />
           </button>
@@ -1145,13 +1137,8 @@ function RoundPage() {
       </Dialog>
 
 
-      <LiveLeaderboard rows={rows} showPenalties={board?.withPenalties !== false} />
-
-      {mapOpen && mapVisible && (
-        <div
-          style={{ opacity: mapOpacity }}
-          className="fixed inset-2 z-40 overflow-hidden rounded-3xl border border-white/20 bg-background/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"
-        >
+      {mapOpen && (
+        <div className="fixed inset-x-0 bottom-17 top-[120px] z-10 overflow-hidden bg-background animate-in fade-in duration-200">
           <ClientOnly fallback={null}>
             <Suspense
               fallback={
@@ -1169,21 +1156,40 @@ function RoundPage() {
           </ClientOnly>
         </div>
       )}
-      {mapOpen && (
-        <GpsFloatingMenu
-          roundId={roundId}
-          holeNumber={hole}
-          userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? null}
-          shotsDisabled={finished || !board?.myRoundPlayerId}
-          mapVisible={mapVisible}
-          onToggleMap={() => setMapVisible((v) => !v)}
-          opacity={mapOpacity}
-          onOpacityChange={(v) => {
-            setMapOpacity(v);
-            localStorage.setItem("gps-map-opacity", String(v));
-          }}
-        />
-      )}
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        {bottomPanel && (
+          <div className="max-h-[60dvh] overflow-y-auto border-b border-border animate-in slide-in-from-bottom-4 fade-in duration-200">
+            {bottomPanel === "leaderboard" ? (
+              <LiveLeaderboard rows={rows} showPenalties={board?.withPenalties !== false} embedded />
+            ) : (
+              <ShotTrackingMenu
+                roundId={roundId}
+                holeNumber={hole}
+                userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? ""}
+                disabled={finished || !board?.myRoundPlayerId}
+              />
+            )}
+          </div>
+        )}
+        <div className="mx-auto grid h-17 max-w-lg grid-cols-2 px-3">
+          {([
+            { key: "leaderboard", label: "Leaderboard", icon: Trophy },
+            { key: "shots", label: "Schlagerfassung", icon: Target },
+          ] as const).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={bottomPanel === key}
+              onClick={() => setBottomPanel((p) => (p === key ? null : key))}
+              className={`flex min-w-0 flex-col items-center justify-center gap-1 transition-colors ${bottomPanel === key ? "text-primary" : "text-muted-foreground"}`}
+            >
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              <span className="text-[11px] font-bold">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }
