@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Compass } from "lucide-react";
 import L from "leaflet";
+import "leaflet-rotate";
 import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { ShotMapLayer } from "@/components/round/ShotMapLayer";
 
@@ -48,6 +50,15 @@ function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
   return null;
 }
 
+function BearingTracker({ onChange }: { onChange: (bearing: number) => void }) {
+  const map = useMapEvents({
+    rotate() {
+      onChange(map.getBearing());
+    },
+  });
+  return null;
+}
+
 function formatDistance(meters: number): string {
   if (meters >= 1000) return `${(meters / 1000).toFixed(2).replace(".", ",")} km`;
   return `${Math.round(meters)} m`;
@@ -60,10 +71,12 @@ interface LiveMapProps {
 }
 
 export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
+  const mapRef = useRef<L.Map | null>(null);
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
   const [target, setTarget] = useState<[number, number] | null>(null);
+  const [bearing, setBearing] = useState(0);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -90,15 +103,21 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
   return (
     <div className="relative h-full w-full">
       <MapContainer
+        ref={mapRef}
         center={position ?? FALLBACK_CENTER}
         zoom={position ? 17 : 13}
         className="h-full w-full"
         zoomControl={false}
+        rotate
+        touchRotate
+        rotateControl={false}
+        bearing={0}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <BearingTracker onChange={setBearing} />
         <TargetPicker onPick={setTarget} />
         {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
         {position && (
@@ -129,6 +148,20 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
           </>
         )}
       </MapContainer>
+
+      {Math.abs(bearing) > 0.5 && (
+        <button
+          type="button"
+          aria-label="Karte nach Norden ausrichten"
+          onClick={() => {
+            const map = mapRef.current;
+            if (map) map.setBearing(0);
+          }}
+          className="absolute right-4 top-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg"
+        >
+          <Compass className="h-5 w-5" style={{ transform: `rotate(${-bearing}deg)` }} />
+        </button>
+      )}
 
       {target && (
         <button
