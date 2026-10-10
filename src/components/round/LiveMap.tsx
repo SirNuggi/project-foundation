@@ -50,6 +50,16 @@ function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
   return null;
 }
 
+function BearingTracker({ onChange }: { onChange: (bearing: number) => void }) {
+  useMapEvents({
+    rotate() {
+      const map = useMapEvents.current;
+      onChange(map?.getBearing() ?? 0);
+    },
+  });
+  return null;
+}
+
 function formatDistance(meters: number): string {
   if (meters >= 1000) return `${(meters / 1000).toFixed(2).replace(".", ",")} km`;
   return `${Math.round(meters)} m`;
