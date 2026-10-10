@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Compass } from "lucide-react";
 import L from "leaflet";
 import "leaflet-rotate";
