@@ -81,14 +81,14 @@ export function LiveLeaderboard({
           </Select>
         )}
 
-        <button
+        {!embedded && <button
           type="button"
           aria-label={open ? "Leaderboard einklappen" : "Leaderboard ausklappen"}
           onClick={() => setOpen((v) => !v)}
           className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center"
         >
           {open ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-        </button>
+        </button>}
       </div>
 
       {open && (
