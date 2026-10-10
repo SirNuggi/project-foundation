@@ -103,6 +103,7 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
   return (
     <div className="relative h-full w-full">
       <MapContainer
+        ref={mapRef}
         center={position ?? FALLBACK_CENTER}
         zoom={position ? 17 : 13}
         className="h-full w-full"
