@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleMarker, Polyline, Tooltip } from "react-leaflet";
 import { getHoleShots } from "@/lib/shots.functions";
-import { clubs } from "@/lib/shots";
 
 interface ShotMapLayerProps {
   roundId: string;
@@ -28,9 +27,8 @@ export function ShotMapLayer({ roundId, holeNumber, userId }: ShotMapLayerProps)
         />
       )}
       {shots.map((shot, index) => {
-        const club = clubs.find((item) => item.code === shot.club_code);
         const distance = shots[index + 1]?.distance_meters;
-        const label = `${club?.short ?? "?"}${distance != null ? `:${Math.round(distance)}m` : ""}`;
+        const label = `${shot.club_code}${distance != null ? `:${Math.round(distance)}m` : ""}`;
         return (
           <CircleMarker
             key={shot.id}
@@ -41,7 +39,7 @@ export function ShotMapLayer({ roundId, holeNumber, userId }: ShotMapLayerProps)
             <Tooltip permanent direction="top" offset={[0, -7]} opacity={1}>
               <span
                 className="text-xs font-bold text-green-800"
-                aria-label={`Schlag ${shot.shot_number}: ${club?.label ?? "Schläger"}${distance != null ? `, ${Math.round(distance)} Meter` : ", Distanz noch offen"}`}
+                aria-label={`Schlag ${shot.shot_number}: ${shot.club_name ?? shot.club_code}${distance != null ? `, ${Math.round(distance)} Meter` : ", Distanz noch offen"}`}
               >
                 {label}
               </span>

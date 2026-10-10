@@ -7,7 +7,7 @@ const holeSchema = z.object({
   holeNumber: z.number().int().min(1).max(18),
 });
 const shotSchema = holeSchema.extend({
-  clubCode: z.enum(["driver", "wood3", "hybrid", "i5", "i7", "i9", "pw", "sw", "putter"]),
+  clubId: z.string().uuid(),
   latitude: z.number().finite().min(-90).max(90),
   longitude: z.number().finite().min(-180).max(180),
 });
@@ -32,6 +32,10 @@ export const logShot = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => shotSchema.parse(input))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
+    const { data: club, error: clubError } = await sb.from("user_clubs")
+      .select("club_code, club_name").eq("id", data.clubId).eq("user_id", context.userId).maybeSingle();
+    if (clubError) throw new Error(clubError.message);
+    if (!club) throw new Error("Dieser Schläger ist nicht mehr in deinem Golfbag.");
     const { data: round, error: roundError } = await sb.from("rounds")
       .select("hole_count").eq("id", data.roundId).maybeSingle();
     if (roundError) throw new Error(roundError.message);
@@ -62,7 +66,8 @@ export const logShot = createServerFn({ method: "POST" })
         user_id: context.userId,
         hole_number: data.holeNumber,
         shot_number: (previous?.shot_number ?? 0) + 1,
-        club_code: data.clubCode,
+        club_code: club.club_code,
+        club_name: club.club_name,
         latitude: data.latitude,
         longitude: data.longitude,
         distance_meters: distance,

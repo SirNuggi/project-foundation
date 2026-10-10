@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { deleteLastShot, getHoleShots, logShot } from "@/lib/shots.functions";
-import { clubs, type ClubCode, type ShotLog } from "@/lib/shots";
+import { getMyBag } from "@/lib/bag.functions";
+import type { UserClub } from "@/lib/bag";
+import type { ShotLog } from "@/lib/shots";
 
 interface ShotTrackingMenuProps {
   roundId: string;
@@ -19,8 +21,13 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
   const fetchShots = useServerFn(getHoleShots);
   const saveShot = useServerFn(logShot);
   const undoShot = useServerFn(deleteLastShot);
+  const fetchBag = useServerFn(getMyBag);
+  const { data: bag = [], isPending: bagPending, error: bagError, refetch: refetchBag } = useQuery({
+    queryKey: ["golf-bag", userId],
+    queryFn: () => fetchBag(),
+  });
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState<ClubCode | "undo" | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const locked = useRef(false);
   const queryKey = ["hole-shots", roundId, userId, holeNumber];
   const { data: shots = [], isPending, error, refetch } = useQuery({
@@ -28,10 +35,10 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
     queryFn: () => fetchShots({ data: { roundId, holeNumber } }),
   });
 
-  async function capture(clubCode: ClubCode) {
+  async function capture(club: UserClub) {
     if (locked.current || disabled) return;
     locked.current = true;
-    setPending(clubCode);
+    setPending(club.id);
     try {
       if (!navigator.geolocation) throw new Error("GPS wird von diesem Gerät nicht unterstützt.");
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -45,13 +52,13 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
       });
       const shot = await saveShot({ data: {
-        roundId, holeNumber, clubCode,
+        roundId, holeNumber, clubId: club.id,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
       } });
       queryClient.setQueryData<ShotLog[]>(queryKey, (current = []) =>
         [...current.filter((item) => item.id !== shot.id), shot].sort((a, b) => a.shot_number - b.shot_number));
-      toast.success(`Schlag ${shot.shot_number}: ${clubs.find((club) => club.code === clubCode)?.label} erfasst`);
+      toast.success(`Schlag ${shot.shot_number}: ${shot.club_name} erfasst`);
       await queryClient.invalidateQueries({ queryKey });
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Schlag konnte nicht gespeichert werden.");
@@ -97,13 +104,19 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
             {pending === "undo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
           </Button>
         </div>
-        <div className="grid grid-cols-5 gap-1.5" aria-label="Schläger-Schnellauswahl">
-          {clubs.map((club) => (
-            <Button key={club.code} variant="outline" aria-label={`${club.label}: Schlag erfassen`} title={club.label} disabled={disabled || !!pending || isPending || !!error} onClick={() => void capture(club.code)} className="h-11 px-0 font-bold transition-transform active:scale-95">
-              {pending === club.code ? <Loader2 className="h-4 w-4 animate-spin" /> : club.short}
-            </Button>
-          ))}
-        </div>
+        {bagPending ? <p className="text-xs text-muted-foreground">Golfbag wird geladen …</p> : bagError ? (
+          <div className="text-xs text-destructive">Golfbag konnte nicht geladen werden.
+            <Button variant="link" size="sm" onClick={() => void refetchBag()}>Erneut laden</Button>
+          </div>
+        ) : !bag.length ? <p className="text-xs text-muted-foreground">Dein Golfbag ist leer. Füge im Profil Schläger hinzu.</p> : (
+          <div className="grid grid-cols-5 gap-1.5" aria-label="Schläger aus meinem Golfbag">
+            {bag.map((club) => (
+              <Button key={club.id} variant="outline" aria-label={`${club.club_name}: Schlag erfassen`} title={club.club_name} disabled={disabled || !!pending || isPending || !!error} onClick={() => void capture(club)} className="h-11 px-0 font-bold transition-transform active:scale-95">
+                {pending === club.id ? <Loader2 className="h-4 w-4 animate-spin" /> : club.club_code}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="mt-3 border-t pt-3" aria-live="polite" aria-busy={!!pending}>
           {pending && <p className="mb-2 text-xs text-muted-foreground">{pending === "undo" ? "Schlag wird entfernt …" : "GPS-Position wird ermittelt und gespeichert …"}</p>}
           {isPending ? <p className="text-xs text-muted-foreground">Schläge werden geladen …</p> : error ? (
@@ -113,13 +126,12 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
           ) : !shots.length ? <p className="text-xs text-muted-foreground">Noch keine Schläge auf diesem Loch.</p> : (
             <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-xs">
               {shots.map((shot, index) => {
-                const club = clubs.find((item) => item.code === shot.club_code);
                 // Die am Folgeschlag gespeicherte Distanz gehört zur Länge dieses Schlags.
                 const distance = shots[index + 1]?.distance_meters;
                 return (
                   <li key={shot.id} className="animate-in fade-in duration-200">
-                    <span title={club?.label} className="inline-block rounded-md bg-muted px-2 py-1.5 font-medium">
-                      {shot.shot_number}. {shot.club_code === "driver" ? "Driver" : club?.short ?? shot.club_code}
+                    <span title={shot.club_name ?? shot.club_code} className="inline-block rounded-md bg-muted px-2 py-1.5 font-medium">
+                      {shot.shot_number}. {shot.club_code}
                       {distance != null && ` (${Math.round(distance)} m)`}
                     </span>
                     {index < shots.length - 1 && <span className="ml-1.5 text-muted-foreground" aria-hidden="true">→</span>}

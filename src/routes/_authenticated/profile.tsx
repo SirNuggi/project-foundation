@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { listMyGroups, createGroup } from "@/lib/groups.functions";
 import { CreateGroupDialog } from "@/components/group/CreateGroupDialog";
+import { GolfBagSection } from "@/components/profile/GolfBagSection";
 import { SubNavigation, SlideViews, type SubNavItem } from "@/components/SubNavigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -254,6 +255,7 @@ function ProfilePage() {
           <Button type="submit" disabled={saving} className="h-14 w-full text-base font-bold">
             {saving ? "Speichere…" : "Speichern"}
           </Button>
+          {data?.profile && <GolfBagSection userId={data.profile.id} />}
         </form>
 
         <section className="px-6 pt-8 pb-4">

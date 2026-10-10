@@ -679,6 +679,7 @@ export type Database = {
           hole_number: number
           shot_number: number
           club_code: string
+          club_name: string | null
           latitude: number
           longitude: number
           distance_meters: number | null
@@ -691,6 +692,7 @@ export type Database = {
           hole_number: number
           shot_number: number
           club_code: string
+          club_name?: string | null
           latitude: number
           longitude: number
           distance_meters?: number | null
@@ -703,6 +705,7 @@ export type Database = {
           hole_number?: number
           shot_number?: number
           club_code?: string
+          club_name?: string | null
           latitude?: number
           longitude?: number
           distance_meters?: number | null
@@ -724,6 +727,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_clubs: {
+        Row: {
+          id: string
+          user_id: string
+          club_code: string
+          club_name: string
+          category: string
+          is_custom: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          club_code: string
+          club_name: string
+          category: string
+          is_custom?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          club_code?: string
+          club_name?: string
+          category?: string
+          is_custom?: boolean
+          created_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "user_clubs_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }]
       }
       rounds: {
         Row: {
