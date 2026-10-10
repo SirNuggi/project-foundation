@@ -671,99 +671,6 @@ export type Database = {
           },
         ]
       }
-      shot_logs: {
-        Row: {
-          id: string
-          round_id: string
-          user_id: string
-          hole_number: number
-          shot_number: number
-          club_code: string
-          club_name: string | null
-          latitude: number
-          longitude: number
-          distance_meters: number | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          round_id: string
-          user_id: string
-          hole_number: number
-          shot_number: number
-          club_code: string
-          club_name?: string | null
-          latitude: number
-          longitude: number
-          distance_meters?: number | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          round_id?: string
-          user_id?: string
-          hole_number?: number
-          shot_number?: number
-          club_code?: string
-          club_name?: string | null
-          latitude?: number
-          longitude?: number
-          distance_meters?: number | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shot_logs_round_id_fkey"
-            columns: ["round_id"]
-            isOneToOne: false
-            referencedRelation: "rounds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shot_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_clubs: {
-        Row: {
-          id: string
-          user_id: string
-          club_code: string
-          club_name: string
-          category: string
-          is_custom: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          club_code: string
-          club_name: string
-          category: string
-          is_custom?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          club_code?: string
-          club_name?: string
-          category?: string
-          is_custom?: boolean
-          created_at?: string
-        }
-        Relationships: [{
-          foreignKeyName: "user_clubs_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "profiles"
-          referencedColumns: ["id"]
-        }]
-      }
       rounds: {
         Row: {
           course_id: string | null
@@ -824,6 +731,63 @@ export type Database = {
           },
         ]
       }
+      shot_logs: {
+        Row: {
+          club_code: string
+          club_name: string | null
+          created_at: string
+          distance_meters: number | null
+          hole_number: number
+          id: string
+          latitude: number
+          longitude: number
+          round_id: string
+          shot_number: number
+          user_id: string
+        }
+        Insert: {
+          club_code: string
+          club_name?: string | null
+          created_at?: string
+          distance_meters?: number | null
+          hole_number: number
+          id?: string
+          latitude: number
+          longitude: number
+          round_id: string
+          shot_number: number
+          user_id: string
+        }
+        Update: {
+          club_code?: string
+          club_name?: string | null
+          created_at?: string
+          distance_meters?: number | null
+          hole_number?: number
+          id?: string
+          latitude?: number
+          longitude?: number
+          round_id?: string
+          shot_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shot_logs_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shot_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tee_boxes: {
         Row: {
           course_id: string
@@ -855,6 +819,44 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_clubs: {
+        Row: {
+          category: string
+          club_code: string
+          club_name: string
+          created_at: string
+          id: string
+          is_custom: boolean
+          user_id: string
+        }
+        Insert: {
+          category: string
+          club_code: string
+          club_name: string
+          created_at?: string
+          id?: string
+          is_custom?: boolean
+          user_id: string
+        }
+        Update: {
+          category?: string
+          club_code?: string
+          club_name?: string
+          created_at?: string
+          id?: string
+          is_custom?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_clubs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
