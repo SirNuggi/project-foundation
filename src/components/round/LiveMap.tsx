@@ -27,16 +27,13 @@ function targetIcon(distanceText: string) {
 
 const FALLBACK_CENTER: [number, number] = [47.5, 13.5];
 
-function FollowPosition({ position }: { position: [number, number] }) {
+function InitialPosition({ position }: { position: [number, number] }) {
   const map = useMap();
   const [firstFix, setFirstFix] = useState(true);
   useEffect(() => {
-    if (firstFix) {
-      map.setView(position, 17);
-      setFirstFix(false);
-    } else {
-      map.panTo(position, { animate: true });
-    }
+    if (!firstFix) return;
+    map.setView(position, 17);
+    setFirstFix(false);
   }, [position, map, firstFix]);
   return null;
 }
@@ -106,7 +103,7 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
         {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
         {position && (
           <>
-            <FollowPosition position={position} />
+            <InitialPosition position={position} />
             <Marker position={position} icon={meIcon} />
             {accuracy !== null && (
               <Circle
