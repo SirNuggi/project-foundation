@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Compass } from "lucide-react";
+import { Compass, Crosshair } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getHoleShots } from "@/lib/shots.functions";
 import L from "leaflet";
 import "leaflet-rotate";
 import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
@@ -29,17 +32,54 @@ function targetIcon(distanceText: string) {
 
 const FALLBACK_CENTER: [number, number] = [47.5, 13.5];
 
-function InitialPosition({ position }: { position: [number, number] }) {
+function InitialPosition({ position, skip }: { position: [number, number]; skip: boolean }) {
   const map = useMap();
   const [firstFix, setFirstFix] = useState(true);
   useEffect(() => {
-    if (!firstFix) return;
+    if (!firstFix || skip) return;
     map.setView(position, 17);
     setFirstFix(false);
   }, [position, map, firstFix]);
   return null;
 }
 
+
+function HoleFocus({ roundId, holeNumber, userId, trigger, auto }: {
+  roundId: string; holeNumber: number; userId: string; trigger: number; auto: boolean;
+}) {
+  const map = useMap();
+  const fetchShots = useServerFn(getHoleShots);
+  const { data: shots } = useQuery({
+    queryKey: ["hole-shots", roundId, userId, holeNumber],
+    queryFn: () => fetchShots({ data: { roundId, holeNumber } }),
+  });
+  const autoDone = useRef<number | null>(null);
+  useEffect(() => {
+    if (!shots?.length) return;
+    const isAuto = auto && autoDone.current !== holeNumber;
+    if (!isAuto && trigger === 0) return;
+    autoDone.current = holeNumber;
+    const first = shots[0];
+    const last = shots[shots.length - 1];
+    if (shots.length === 1) {
+      map.setBearing(0);
+      map.setView([first.latitude, first.longitude], 18);
+      return;
+    }
+    // Kompassrichtung vom ersten zum letzten Schlag zeigt nach oben.
+    const r = Math.PI / 180;
+    const y = Math.sin((last.longitude - first.longitude) * r) * Math.cos(last.latitude * r);
+    const x = Math.cos(first.latitude * r) * Math.sin(last.latitude * r)
+      - Math.sin(first.latitude * r) * Math.cos(last.latitude * r) * Math.cos((last.longitude - first.longitude) * r);
+    const heading = Math.atan2(y, x) / r;
+    map.setBearing(-heading);
+    map.fitBounds(L.latLngBounds(shots.map((s) => [s.latitude, s.longitude] as [number, number])), {
+      padding: [50, 50], maxZoom: 19,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shots, trigger, auto, holeNumber, map]);
+  return null;
+}
 
 function TargetPicker({ onPick }: { onPick: (pos: [number, number]) => void }) {
   useMapEvents({
@@ -68,15 +108,17 @@ interface LiveMapProps {
   roundId: string;
   holeNumber: number;
   userId: string | null;
+  finished?: boolean;
 }
 
-export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
+export default function LiveMap({ roundId, holeNumber, userId, finished = false }: LiveMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [denied, setDenied] = useState(false);
   const [target, setTarget] = useState<[number, number] | null>(null);
   const [bearing, setBearing] = useState(0);
+  const [focusTrigger, setFocusTrigger] = useState(0);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -120,9 +162,12 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
         <BearingTracker onChange={setBearing} />
         <TargetPicker onPick={setTarget} />
         {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
+        {userId && (
+          <HoleFocus roundId={roundId} holeNumber={holeNumber} userId={userId} trigger={focusTrigger} auto={finished} />
+        )}
         {position && (
           <>
-            <InitialPosition position={position} />
+            <InitialPosition position={position} skip={finished} />
             <Marker position={position} icon={meIcon} />
             {accuracy !== null && (
               <Circle
@@ -148,6 +193,18 @@ export default function LiveMap({ roundId, holeNumber, userId }: LiveMapProps) {
           </>
         )}
       </MapContainer>
+
+      {userId && (
+        <button
+          type="button"
+          aria-label="Auf Schläge des Lochs zoomen und ausrichten"
+          title="Auf Loch ausrichten"
+          onClick={() => setFocusTrigger((n) => n + 1)}
+          className="absolute right-4 top-[4.25rem] z-[1000] flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg"
+        >
+          <Crosshair className="h-5 w-5" />
+        </button>
+      )}
 
       {Math.abs(bearing) > 0.5 && (
         <button
