@@ -779,7 +779,7 @@ function NewRound() {
             : null,
           playedOn,
           holeCount,
-          withPenalties,
+          withPenalties: penaltyFundAvailable && withPenalties,
           myTeeBoxId: teeIdFor(effectiveMyTee),
           myTeeName: effectiveMyTee,
           myHandicapIndex: myHandicap,
