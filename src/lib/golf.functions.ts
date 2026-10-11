@@ -361,6 +361,17 @@ export const createRound = createServerFn({ method: "POST" })
       .eq("id", context.userId)
       .maybeSingle();
 
+    // Strafkasse nur, wenn eine Gruppe mit aktivierter Strafkasse gewählt ist
+    let withPenalties = false;
+    if (data.groupId && data.withPenalties) {
+      const { data: grp } = await sb
+        .from("groups")
+        .select("has_penalty_fund")
+        .eq("id", data.groupId)
+        .maybeSingle();
+      withPenalties = grp?.has_penalty_fund === true;
+    }
+
     const { data: round, error } = await sb
       .from("rounds")
       .insert({
@@ -370,7 +381,7 @@ export const createRound = createServerFn({ method: "POST" })
         course_name: courseName,
         played_on: data.playedOn,
         hole_count: data.holeCount,
-        with_penalties: data.withPenalties ?? true,
+        with_penalties: withPenalties,
         created_by: context.userId,
       })
       .select("id")
