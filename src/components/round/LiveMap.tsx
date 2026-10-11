@@ -59,8 +59,8 @@ function HoleFocus({ roundId, holeNumber, userId, trigger, auto }: {
     const isAuto = auto && autoDone.current !== holeNumber;
     if (!isAuto && trigger === 0) return;
     autoDone.current = holeNumber;
-    const first = shots[0];
-    const last = shots[shots.length - 1];
+    const first = shots[0]!;
+    const last = shots[shots.length - 1]!;
     if (shots.length === 1) {
       map.setBearing(0);
       map.setView([first.latitude, first.longitude], 18);

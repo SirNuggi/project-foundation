@@ -1148,9 +1148,9 @@ function RoundPage() {
               }
             >
               <LiveMap
+                finished={finished}
                 roundId={roundId}
                 holeNumber={hole}
-                finished={finished}
                 userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? null}
               />
             </Suspense>
@@ -1167,7 +1167,6 @@ function RoundPage() {
               <ShotTrackingMenu
                 roundId={roundId}
                 holeNumber={hole}
-                finished={finished}
                 userId={board?.players.find((player) => player.id === board.myRoundPlayerId)?.profileId ?? ""}
                 disabled={finished || !board?.myRoundPlayerId}
               />
