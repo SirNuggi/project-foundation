@@ -657,6 +657,7 @@ function NewRound() {
           const hasPenaltyFund = groupData?.hasPenaltyFund ?? false;
           setPenaltyFundAvailable(hasPenaltyFund);
           if (!hasPenaltyFund) {
+            setWithPenalties(false);
             setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
           } else {
             setPenaltyFundHint("");
