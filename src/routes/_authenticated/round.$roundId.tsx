@@ -736,7 +736,6 @@ function RoundPage() {
                                     <button
                                       type="button"
                                       className="flex w-full items-center justify-between rounded-lg bg-muted/50 p-3 text-sm font-medium transition-colors hover:bg-muted"
-                                      disabled={!viewingOwnFlight || activeFlightFinished}
                                     >
                                       <span className="flex items-center gap-2">
                                         <ArrowDown className="h-4 w-4" />
@@ -765,6 +764,7 @@ function RoundPage() {
                                           <button
                                             key={value}
                                             type="button"
+                                            disabled={!viewingOwnFlight || activeFlightFinished}
                                             onClick={() => saveExtras({ teeDirection: teeDirection === value ? null : value, sandShots, penaltyStrokes })}
                                             className={`flex flex-col items-center gap-1 rounded-lg border p-2 transition-all ${
                                               teeDirection === value
