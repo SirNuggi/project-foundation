@@ -664,6 +664,7 @@ function NewRound() {
           }
         } catch (e) {
           setPenaltyFundAvailable(false);
+          setWithPenalties(false);
           setPenaltyFundHint("Fehler beim Laden der Gruppen-Informationen.");
         }
       }
