@@ -648,6 +648,7 @@ function NewRound() {
       async function loadPenaltyFundStatus() {
         if (!groupId) {
           setPenaltyFundAvailable(false);
+          setWithPenalties(false);
           setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
           return;
         }
@@ -656,12 +657,14 @@ function NewRound() {
           const hasPenaltyFund = groupData?.hasPenaltyFund ?? false;
           setPenaltyFundAvailable(hasPenaltyFund);
           if (!hasPenaltyFund) {
+            setWithPenalties(false);
             setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
           } else {
             setPenaltyFundHint("");
           }
         } catch (e) {
           setPenaltyFundAvailable(false);
+          setWithPenalties(false);
           setPenaltyFundHint("Fehler beim Laden der Gruppen-Informationen.");
         }
       }
@@ -776,7 +779,7 @@ function NewRound() {
             : null,
           playedOn,
           holeCount,
-          withPenalties,
+          withPenalties: penaltyFundAvailable && withPenalties,
           myTeeBoxId: teeIdFor(effectiveMyTee),
           myTeeName: effectiveMyTee,
           myHandicapIndex: myHandicap,
