@@ -648,6 +648,7 @@ function NewRound() {
       async function loadPenaltyFundStatus() {
         if (!groupId) {
           setPenaltyFundAvailable(false);
+          setWithPenalties(false);
           setPenaltyFundHint("Strafkasse ist nur verfügbar, wenn eine Gruppe mit aktivierter Strafkasse ausgewählt ist.");
           return;
         }
