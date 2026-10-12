@@ -59,7 +59,10 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
       queryClient.setQueryData<ShotLog[]>(queryKey, (current = []) =>
         [...current.filter((item) => item.id !== shot.id), shot].sort((a, b) => a.shot_number - b.shot_number));
       toast.success(`Schlag ${shot.shot_number}: ${shot.club_name} erfasst`);
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: ["round-shots", roundId, userId] }),
+      ]);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Schlag konnte nicht gespeichert werden.");
     } finally {
@@ -78,7 +81,10 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
         queryClient.setQueryData<ShotLog[]>(queryKey, (current = []) => current.filter((shot) => shot.id !== deleted.id));
         toast.success(`Schlag ${deleted.shot_number} entfernt`);
       }
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: ["round-shots", roundId, userId] }),
+      ]);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Schlag konnte nicht entfernt werden.");
     } finally {

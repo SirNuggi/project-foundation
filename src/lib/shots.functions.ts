@@ -27,6 +27,29 @@ export const getHoleShots = createServerFn({ method: "GET" })
     return shots;
   });
 
+export const getRoundShots = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ roundId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: player, error: playerError } = await context.supabase
+      .from("round_players")
+      .select("id")
+      .eq("round_id", data.roundId)
+      .eq("profile_id", context.userId)
+      .maybeSingle();
+    if (playerError) throw new Error(playerError.message);
+    if (!player) throw new Error("Du bist kein Teilnehmer dieser Runde.");
+    const { data: shots, error } = await context.supabase
+      .from("shot_logs")
+      .select("*")
+      .eq("round_id", data.roundId)
+      .eq("user_id", context.userId)
+      .order("hole_number", { ascending: true })
+      .order("shot_number", { ascending: true });
+    if (error) throw new Error(error.message);
+    return shots;
+  });
+
 export const logShot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => shotSchema.parse(input))

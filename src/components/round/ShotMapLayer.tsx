@@ -1,29 +1,41 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import type { Tooltip as LeafletTooltip } from "leaflet";
-import { CircleMarker, Polyline, Tooltip, useMap } from "react-leaflet";
-import { getHoleShots } from "@/lib/shots.functions";
+import { CircleMarker, Polyline, Tooltip, useMapEvents } from "react-leaflet";
+import { getHoleShots, getRoundShots } from "@/lib/shots.functions";
 import { placeShotLabels } from "@/components/round/shotLabelLayout";
+import type { ShotLog } from "@/lib/shots";
 
 interface ShotMapLayerProps {
   roundId: string;
   holeNumber: number;
   userId: string;
+  showAll: boolean;
   targetLine?: [[number, number], [number, number]] | undefined;
 }
 
-export function ShotMapLayer({ roundId, holeNumber, userId, targetLine }: ShotMapLayerProps) {
-  const map = useMap();
+export function ShotMapLayer({ roundId, holeNumber, userId, showAll, targetLine }: ShotMapLayerProps) {
+  const map = useMapEvents({
+    zoomend() { setShowLabels(map.getZoom() >= 16); },
+  });
+  const [showLabels, setShowLabels] = useState(() => map.getZoom() >= 16);
   const tooltips = useRef(new Map<string, LeafletTooltip>());
   const fetchShots = useServerFn(getHoleShots);
+  const fetchRoundShots = useServerFn(getRoundShots);
   const { data: shots = [] } = useQuery({
-    queryKey: ["hole-shots", roundId, userId, holeNumber],
-    queryFn: () => fetchShots({ data: { roundId, holeNumber } }),
+    queryKey: showAll ? ["round-shots", roundId, userId] : ["hole-shots", roundId, userId, holeNumber],
+    queryFn: () => showAll ? fetchRoundShots({ data: { roundId } }) : fetchShots({ data: { roundId, holeNumber } }),
   });
-  const positions: [number, number][] = shots.map((shot) => [shot.latitude, shot.longitude]);
+  const holes = new Map<number, ShotLog[]>();
+  shots.forEach((shot) => {
+    const hole = holes.get(shot.hole_number) ?? [];
+    hole.push(shot);
+    holes.set(shot.hole_number, hole);
+  });
 
   useEffect(() => {
+    if (!showLabels) return;
     let frame = 0;
     const layout = () => {
       const labels = shots.map((shot) => tooltips.current.get(shot.id));
@@ -33,7 +45,10 @@ export function ShotMapLayer({ roundId, holeNumber, userId, targetLine }: ShotMa
         const element = label!.getElement()!;
         return { width: element.offsetWidth, height: element.offsetHeight };
       });
-      const lines: [typeof points[number], typeof points[number]][] = points.slice(1).map((point, index) => [points[index]!, point]);
+      const lines: [typeof points[number], typeof points[number]][] = [];
+      points.slice(1).forEach((point, index) => {
+        if (shots[index]!.hole_number === shots[index + 1]!.hole_number) lines.push([points[index]!, point]);
+      });
       if (targetLine) {
         lines.push([map.latLngToContainerPoint(targetLine[0]), map.latLngToContainerPoint(targetLine[1])]);
       }
@@ -56,19 +71,21 @@ export function ShotMapLayer({ roundId, holeNumber, userId, targetLine }: ShotMa
       cancelAnimationFrame(frame);
       map.off("move zoomend rotate resize", scheduleLayout);
     };
-  }, [map, shots, targetLine]);
+  }, [map, shots, targetLine, showLabels]);
 
   return (
     <>
-      {positions.length > 1 && (
+      {Array.from(holes, ([hole, holeShots]) => holeShots.length > 1 && (
         <Polyline
-          positions={positions}
+          key={hole}
+          positions={holeShots.map((shot) => [shot.latitude, shot.longitude] as [number, number])}
           interactive={false}
           pathOptions={{ color: "#22c55e", weight: 2, opacity: 0.65, lineCap: "round", lineJoin: "round" }}
         />
-      )}
+      ))}
       {shots.map((shot, index) => {
-        const distance = shots[index + 1]?.distance_meters;
+        const next = shots[index + 1];
+        const distance = next?.hole_number === shot.hole_number ? next.distance_meters : null;
         const label = `${shot.club_code}${distance != null ? `:${Math.round(distance)}m` : ""}`;
         return (
           <CircleMarker
@@ -77,24 +94,26 @@ export function ShotMapLayer({ roundId, holeNumber, userId, targetLine }: ShotMa
             radius={5}
             pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#16a34a", fillOpacity: 1 }}
           >
-            <Tooltip
-              ref={(tooltip) => {
-                if (tooltip) tooltips.current.set(shot.id, tooltip);
-                else tooltips.current.delete(shot.id);
-              }}
-              permanent
-              direction="right"
-              offset={[10, 0]}
-              opacity={1}
-              className="m-0! rounded! border-green-800/30! px-1! py-0.5! text-[10px]! leading-3! shadow-none! before:hidden!"
-            >
-              <span
-                className="font-bold text-green-800"
-                aria-label={`Schlag ${shot.shot_number}: ${shot.club_name ?? shot.club_code}${distance != null ? `, ${Math.round(distance)} Meter` : ", Distanz noch offen"}`}
+            {showLabels && (
+              <Tooltip
+                ref={(tooltip) => {
+                  if (tooltip) tooltips.current.set(shot.id, tooltip);
+                  else tooltips.current.delete(shot.id);
+                }}
+                permanent
+                direction="right"
+                offset={[10, 0]}
+                opacity={1}
+                className="m-0! rounded! border-green-800/30! px-1! py-0.5! text-[10px]! leading-3! shadow-none! before:hidden!"
               >
-                {label}
-              </span>
-            </Tooltip>
+                <span
+                  className="font-bold text-green-800"
+                  aria-label={`Loch ${shot.hole_number}, Schlag ${shot.shot_number}: ${shot.club_name ?? shot.club_code}${distance != null ? `, ${Math.round(distance)} Meter` : ", Distanz noch offen"}`}
+                >
+                  {label}
+                </span>
+              </Tooltip>
+            )}
           </CircleMarker>
         );
       })}

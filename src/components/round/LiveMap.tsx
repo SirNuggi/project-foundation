@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Compass, Crosshair } from "lucide-react";
+import { Compass, Crosshair, Route } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getHoleShots } from "@/lib/shots.functions";
@@ -7,6 +7,8 @@ import L from "leaflet";
 import "leaflet-rotate";
 import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { ShotMapLayer } from "@/components/round/ShotMapLayer";
+import { RoundShotFocus } from "@/components/round/RoundShotFocus";
+import { Button } from "@/components/ui/button";
 
 const meIcon = L.divIcon({
   className: "",
@@ -36,10 +38,10 @@ function InitialPosition({ position, skip }: { position: [number, number]; skip:
   const map = useMap();
   const [firstFix, setFirstFix] = useState(true);
   useEffect(() => {
-    if (!firstFix || skip) return;
-    map.setView(position, 17);
+    if (!firstFix) return;
+    if (!skip) map.setView(position, 17);
     setFirstFix(false);
-  }, [position, map, firstFix]);
+  }, [position, map, firstFix, skip]);
   return null;
 }
 
@@ -119,6 +121,7 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
   const [target, setTarget] = useState<[number, number] | null>(null);
   const [bearing, setBearing] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
+  const [showAllShots, setShowAllShots] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -166,15 +169,18 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
             roundId={roundId}
             holeNumber={holeNumber}
             userId={userId}
+            showAll={showAllShots}
             targetLine={position && target ? [position, target] : undefined}
           />
         )}
-        {userId && (
+        {userId && (showAllShots ? (
+          <RoundShotFocus roundId={roundId} userId={userId} />
+        ) : (
           <HoleFocus roundId={roundId} holeNumber={holeNumber} userId={userId} trigger={focusTrigger} auto={finished} />
-        )}
+        ))}
         {position && (
           <>
-            <InitialPosition position={position} skip={finished} />
+            <InitialPosition position={position} skip={finished || showAllShots} />
             <Marker position={position} icon={meIcon} />
             {accuracy !== null && (
               <Circle
@@ -202,15 +208,34 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
       </MapContainer>
 
       {userId && (
-        <button
-          type="button"
-          aria-label="Auf Schläge des Lochs zoomen und ausrichten"
-          title="Auf Loch ausrichten"
-          onClick={() => setFocusTrigger((n) => n + 1)}
-          className="absolute right-4 top-[4.25rem] z-[1000] flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg"
-        >
-          <Crosshair className="h-5 w-5" />
-        </button>
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            aria-label="Auf Schläge des Lochs zoomen und ausrichten"
+            title="Auf Loch ausrichten"
+            onClick={() => {
+              setShowAllShots(false);
+              setFocusTrigger((n) => n + 1);
+            }}
+            className="absolute right-4 top-[4.25rem] z-[1000] h-11 w-11 rounded-full shadow-lg"
+          >
+            <Crosshair className="h-5 w-5" />
+          </Button>
+          <Button
+            type="button"
+            variant={showAllShots ? "default" : "secondary"}
+            size="icon"
+            aria-label={showAllShots ? "Nur Schläge des aktuellen Lochs anzeigen" : "Alle Schläge der Runde anzeigen"}
+            aria-pressed={showAllShots}
+            title={showAllShots ? "Zurück zum aktuellen Loch" : "Alle Schläge der Runde"}
+            onClick={() => setShowAllShots((current) => !current)}
+            className="absolute right-4 top-[7.5rem] z-[1000] h-11 w-11 rounded-full shadow-lg"
+          >
+            <Route className="h-5 w-5" />
+          </Button>
+        </>
       )}
 
       {Math.abs(bearing) > 0.5 && (
