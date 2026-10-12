@@ -34,6 +34,16 @@ function targetIcon(distanceText: string) {
 
 const FALLBACK_CENTER: [number, number] = [47.5, 13.5];
 
+function MapSizeTracker() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 function InitialPosition({ position, skip }: { position: [number, number]; skip: boolean }) {
   const map = useMap();
   const [firstFix, setFirstFix] = useState(true);
@@ -162,6 +172,7 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <MapSizeTracker />
         <BearingTracker onChange={setBearing} />
         <TargetPicker onPick={setTarget} />
         {userId && (

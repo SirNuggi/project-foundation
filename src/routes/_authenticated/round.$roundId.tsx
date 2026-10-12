@@ -135,6 +135,7 @@ function RoundPage() {
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { strokes: number; putts: number }>>({});
   const [mapOpen, setMapOpen] = useState(false);
+  const [headerExpanded, setHeaderExpanded] = useState(false);
   const [bottomPanel, setBottomPanel] = useState<"leaderboard" | "shots" | null>(null);
   const [activeFlightId, setActiveFlightId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
@@ -445,10 +446,12 @@ function RoundPage() {
 
 
   return (
-    <main className="min-h-screen bg-background pb-64 pt-[120px]">
-      <header className="fixed inset-x-0 top-0 z-30 flex h-[120px] flex-col justify-center bg-secondary px-4 text-secondary-foreground">
+    <main className={`min-h-screen bg-background pb-64 ${headerExpanded ? "pt-[120px]" : "pt-14"}`}>
+      <Collapsible open={headerExpanded} onOpenChange={setHeaderExpanded} asChild>
+      <header className={`fixed inset-x-0 top-0 z-30 flex flex-col justify-center bg-secondary px-2 text-secondary-foreground sm:px-4 ${headerExpanded ? "h-[120px]" : "h-14"}`}>
+        <CollapsibleContent id="round-header-details">
         <div className="flex min-w-0 items-start justify-between gap-3">
-          <h1 className="min-w-0 truncate text-xl font-black leading-5 tracking-tight">
+          <h1 className="min-w-0 truncate text-lg font-black leading-5 tracking-tight">
             {board ? (
               <>
                 <span>{board.roundName ?? board.courseName}</span>
@@ -535,19 +538,32 @@ function RoundPage() {
             ) : null}
           </div>
         ) : null}
+        </CollapsibleContent>
 
-        <div className="mt-1 flex items-center gap-2">
+        <div className={`flex items-center gap-1 sm:gap-2 ${headerExpanded ? "mt-1" : ""}`}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={headerExpanded ? "Rundeninfos einklappen" : "Rundeninfos ausklappen"}
+              aria-controls="round-header-details"
+              title={headerExpanded ? "Rundeninfos einklappen" : "Rundeninfos ausklappen"}
+              className="h-8 w-8 shrink-0 rounded-full hover:bg-sidebar-accent hover:text-secondary-foreground"
+            >
+              {headerExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
           <button
             type="button"
             aria-label="Vorheriges Loch"
             onClick={() => setHole((h) => Math.max(1, h - 1))}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sidebar-accent"
+            className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent sm:w-9"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
 
           <Popover open={holePickerOpen} onOpenChange={setHolePickerOpen}>
-            <PopoverTrigger className="whitespace-nowrap px-1 text-left text-base font-black">
+            <PopoverTrigger className="whitespace-nowrap px-1 text-left text-sm font-black sm:text-base">
               Loch {hole} · Par {par}
             </PopoverTrigger>
             <PopoverContent align="start" className="w-auto p-3">
@@ -581,7 +597,7 @@ function RoundPage() {
             type="button"
             aria-label="Nächstes Loch"
             onClick={() => setHole((h) => Math.min(holeCount, h + 1))}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sidebar-accent"
+            className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent sm:w-9"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -626,6 +642,7 @@ function RoundPage() {
           </DropdownMenu>
         </div>
       </header>
+      </Collapsible>
 
       <section
         aria-label={activeFlight ? `Flight ${activeFlight.number} von ${orderedFlights.length}` : "Flight"}
@@ -1138,7 +1155,7 @@ function RoundPage() {
 
 
       {mapOpen && (
-        <div className="fixed inset-x-0 bottom-17 top-[120px] z-10 overflow-hidden bg-background animate-in fade-in duration-200">
+        <div className={`fixed inset-x-0 bottom-17 z-10 overflow-hidden bg-background animate-in fade-in duration-200 ${headerExpanded ? "top-[120px]" : "top-14"}`}>
           <ClientOnly fallback={null}>
             <Suspense
               fallback={
