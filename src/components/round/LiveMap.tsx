@@ -161,7 +161,14 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
         />
         <BearingTracker onChange={setBearing} />
         <TargetPicker onPick={setTarget} />
-        {userId && <ShotMapLayer roundId={roundId} holeNumber={holeNumber} userId={userId} />}
+        {userId && (
+          <ShotMapLayer
+            roundId={roundId}
+            holeNumber={holeNumber}
+            userId={userId}
+            targetLine={position && target ? [position, target] : undefined}
+          />
+        )}
         {userId && (
           <HoleFocus roundId={roundId} holeNumber={holeNumber} userId={userId} trigger={focusTrigger} auto={finished} />
         )}
