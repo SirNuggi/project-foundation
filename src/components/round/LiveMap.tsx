@@ -248,11 +248,6 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
           Suche deine Position …
         </div>
       )}
-      {!target && !denied && position && (
-        <div className="absolute inset-x-4 bottom-6 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-center text-sm font-bold text-secondary-foreground shadow-lg">
-          Tippe auf die Karte, um einen Ziel-Marker zu setzen.
-        </div>
-      )}
     </div>
   );
 }
