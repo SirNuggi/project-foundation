@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Compass, Crosshair, Route } from "lucide-react";
+import { Compass, Crosshair, Layers, Map, Mountain, Route, Satellite } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getHoleShots } from "@/lib/shots.functions";
@@ -9,6 +9,41 @@ import { Circle, MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents
 import { ShotMapLayer } from "@/components/round/ShotMapLayer";
 import { RoundShotFocus } from "@/components/round/RoundShotFocus";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const MAP_LAYERS = [
+  {
+    id: "streets",
+    label: "Straßenkarte",
+    icon: Map,
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende',
+    maxNativeZoom: 19,
+  },
+  {
+    id: "satellite",
+    label: "Satellit (Ortho)",
+    icon: Satellite,
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Bilddaten &copy; <a href="https://www.esri.com/">Esri</a>, Vantor, Earthstar Geographics, GIS User Community',
+    maxNativeZoom: 19,
+  },
+  {
+    id: "terrain",
+    label: "Topografische Karte",
+    icon: Mountain,
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: 'Karte &copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, USGS, &copy; OpenStreetMap-Mitwirkende, GIS User Community',
+    maxNativeZoom: 19,
+  },
+] as const;
 
 const meIcon = L.divIcon({
   className: "",
@@ -71,8 +106,9 @@ function HoleFocus({ roundId, holeNumber, userId, trigger, auto }: {
     const isAuto = auto && autoDone.current !== holeNumber;
     if (!isAuto && trigger === 0) return;
     autoDone.current = holeNumber;
-    const first = shots[0]!;
-    const last = shots[shots.length - 1]!;
+    const first = shots[0];
+    const last = shots[shots.length - 1];
+    if (!first || !last) return;
     if (shots.length === 1) {
       map.setBearing(0);
       map.setView([first.latitude, first.longitude], 18);
@@ -132,6 +168,8 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
   const [bearing, setBearing] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
   const [showAllShots, setShowAllShots] = useState(false);
+  const [layerId, setLayerId] = useState<string>("streets");
+  const activeLayer = MAP_LAYERS.find((layer) => layer.id === layerId) ?? MAP_LAYERS[0];
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -169,8 +207,11 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
         bearing={0}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={activeLayer.id}
+          attribution={activeLayer.attribution}
+          url={activeLayer.url}
+          maxNativeZoom={activeLayer.maxNativeZoom}
+          maxZoom={22}
         />
         <MapSizeTracker />
         <BearingTracker onChange={setBearing} />
@@ -217,6 +258,32 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
           </>
         )}
       </MapContainer>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            aria-label="Kartendarstellung wählen"
+            title={`Kartendarstellung: ${activeLayer.label}`}
+            className="absolute left-4 top-4 z-[1000] h-11 w-11 rounded-full shadow-lg"
+          >
+            <Layers className="h-5 w-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={8} className="z-[1100] w-56">
+          <DropdownMenuLabel>Kartendarstellung</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={layerId} onValueChange={setLayerId}>
+            {MAP_LAYERS.map((layer) => (
+              <DropdownMenuRadioItem key={layer.id} value={layer.id} className="min-h-11 gap-2">
+                <layer.icon className="h-4 w-4 shrink-0" />
+                {layer.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {userId && (
         <>
@@ -274,13 +341,13 @@ export default function LiveMap({ roundId, holeNumber, userId, finished = false 
       )}
 
       {denied && (
-        <div className="absolute inset-x-4 top-4 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
+        <div className="absolute inset-x-4 bottom-20 z-[1000] rounded-lg bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
           Standort nicht freigegeben — dein Punkt kann nicht angezeigt werden. Du kannst die Karte
           trotzdem nutzen.
         </div>
       )}
       {!position && !denied && (
-        <div className="absolute inset-x-4 top-4 z-[1000] rounded-2xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
+        <div className="absolute inset-x-4 bottom-20 z-[1000] rounded-lg bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground shadow-lg">
           Suche deine Position …
         </div>
       )}

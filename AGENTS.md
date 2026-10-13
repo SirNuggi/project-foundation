@@ -13,3 +13,4 @@
 - Personal golf aggregates use the pure calculator in src/lib/golf-statistics.ts with authenticated, user-scoped reads; this keeps rules independently testable without storing derived metrics.
 - Golf aggregates use the hole par saved on each score and exclude missing or invalid putting values; this preserves the played hole context and avoids treating absent data as successful GIRs.
 - Putts are averaged per recorded hole and trended over the latest twelve finished rounds; this makes rounds of different lengths comparable.
+- Base-map changes replace only the Leaflet tile layer, never the map instance, so position, rotation and shot overlays stay intact.
