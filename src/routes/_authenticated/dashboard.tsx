@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ChevronDown, Flag, Plus, Shield } from "lucide-react";
+import { ChevronDown, Flag, Plus } from "lucide-react";
 import { getMyProfile, listMyRounds } from "@/lib/golf.functions";
 import { Button } from "@/components/ui/button";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -118,13 +118,6 @@ function Dashboard() {
         )}
       </section>
 
-      <div className="mt-10 px-6">
-        <Button asChild variant="ghost" className="w-full text-muted-foreground">
-          <Link to="/admin">
-            <Shield className="mr-2 h-4 w-4" /> Admin-Bereich
-          </Link>
-        </Button>
-      </div>
       <BottomNavigation />
     </main>
   );
