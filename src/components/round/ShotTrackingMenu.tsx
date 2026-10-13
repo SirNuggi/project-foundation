@@ -116,10 +116,23 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
                   {shots.map((shot, index) => {
                     const distance = shots[index + 1]?.distance_meters;
                     return (
-                      <li key={shot.id}>
-                        <span title={shot.club_name ?? shot.club_code} className="inline-block rounded-md bg-muted px-2 py-1 font-medium">
+                      <li key={shot.id} className="flex items-center">
+                        <span title={shot.club_name ?? shot.club_code} className="inline-flex items-center rounded-md bg-muted px-2 py-1 font-medium">
                           {shot.shot_number}. {shot.club_code}
                           {distance != null && ` (${Math.round(distance)} m)`}
+                          {index === shots.length - 1 && !disabled && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Letzten Schlag entfernen"
+                              title="Letzten Schlag rückgängig machen"
+                              disabled={!!pending || !!error || isPending}
+                              onClick={() => void undo()}
+                              className="ml-1 h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                            >
+                              {pending === "undo" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
                         </span>
                         {index < shots.length - 1 && <span className="ml-1.5 text-muted-foreground" aria-hidden="true">→</span>}
                       </li>
@@ -128,10 +141,6 @@ export function ShotTrackingMenu({ roundId, holeNumber, userId, disabled }: Shot
                 </ol>
               )}
             </div>
-            <Button variant="outline" size="sm" aria-label="Letzten Schlag entfernen" disabled={disabled || !!pending || !shots.length || !!error || isPending} onClick={() => void undo()} className="h-8 shrink-0 gap-1 px-2 text-xs">
-              {pending === "undo" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-              Rückgängig
-            </Button>
           </div>
         </div>
       )}
