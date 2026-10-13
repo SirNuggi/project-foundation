@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { LogOut, Pencil, Plus, Trash2, UserRound, Users, UsersRound } from "lucide-react";
+import { LogOut, Pencil, Plus, Shield, Trash2, UserRound, Users, UsersRound } from "lucide-react";
 
 import {
   createPassivePlayer,
@@ -73,6 +73,18 @@ function ProfilePage() {
   const { data: passivePlayers = [] } = useQuery({
     queryKey: ["my-passive-players"],
     queryFn: () => fetchPassivePlayers(),
+  });
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["my-admin-role", data?.profile?.id],
+    enabled: !!data?.profile?.id,
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data!.profile!.id)
+        .eq("role", "admin");
+      return (rows?.length ?? 0) > 0;
+    },
   });
 
   const [tab, setTab] = useState("me");
@@ -256,6 +268,13 @@ function ProfilePage() {
             {saving ? "Speichere…" : "Speichern"}
           </Button>
           {data?.profile && <GolfBagSection userId={data.profile.id} />}
+          {isAdmin && (
+            <Button asChild variant="ghost" className="w-full text-muted-foreground">
+              <Link to="/admin">
+                <Shield className="mr-2 h-4 w-4" /> Admin-Bereich
+              </Link>
+            </Button>
+          )}
         </form>
 
         <section className="px-6 pt-8 pb-4">
