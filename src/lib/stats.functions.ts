@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculateGolfStatistics } from "@/lib/golf-statistics";
+import { buildRoundHoles, playingHandicap } from "@/lib/stableford";
 
 export type StatsRound = {
   id: string;
@@ -129,11 +130,22 @@ export const getMyGolfStatistics = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: entries, error } = await context.supabase
       .from("round_players")
-      .select("id, profile_id, rounds!inner(id, course_name, played_on, hole_count, status)")
+      .select("id, profile_id, course_handicap, rounds!inner(id, course_id, course_name, played_on, hole_count, status)")
       .eq("profile_id", context.userId)
       .eq("rounds.status", "finished");
     if (error) throw new Error(error.message);
 
+    const courseIds = [...new Set((entries ?? []).map((e) => e.rounds.course_id).filter((id): id is string => Boolean(id)))];
+    const holesByCourse = new Map<string, { hole_number: number; par: number; stroke_index: number | null; stroke_index_back: number | null }[]>();
+    const courseHoleCount = new Map<string, number>();
+    if (courseIds.length) {
+      const [{ data: ch }, { data: cs }] = await Promise.all([
+        context.supabase.from("course_holes").select("course_id, hole_number, par, stroke_index, stroke_index_back").in("course_id", courseIds),
+        context.supabase.from("courses").select("id, hole_count").in("id", courseIds),
+      ]);
+      for (const h of ch ?? []) holesByCourse.set(h.course_id, [...(holesByCourse.get(h.course_id) ?? []), h]);
+      for (const c of cs ?? []) courseHoleCount.set(c.id, c.hole_count);
+    }
     const rounds = (entries ?? []).map((entry) => ({
       playerId: entry.id,
       profileId: entry.profile_id ?? "",
@@ -142,6 +154,10 @@ export const getMyGolfStatistics = createServerFn({ method: "GET" })
       playedOn: entry.rounds.played_on,
       courseName: entry.rounds.course_name,
       holeCount: entry.rounds.hole_count,
+      playingHandicap: entry.course_handicap === null ? null : playingHandicap(entry.course_handicap, entry.rounds.hole_count),
+      strokeIndexes: entry.rounds.course_id && holesByCourse.has(entry.rounds.course_id)
+        ? Object.fromEntries(buildRoundHoles(holesByCourse.get(entry.rounds.course_id) ?? [], courseHoleCount.get(entry.rounds.course_id) ?? 18, entry.rounds.hole_count).map((h) => [h.holeNumber, h.strokeIndex]))
+        : undefined,
     }));
 
     // Page explicitly: Supabase caps responses, which must not truncate long-term stats.
