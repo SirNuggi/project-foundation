@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Coins, Crown, Flag, MapPin, Trophy } from "lucide-react";
 import { getHallOfShame, getMyStats, getMyGolfStatistics, getUserGroups, OTHER_GROUP_ID, type UserGroup } from "@/lib/stats.functions";
 import { GolfPerformance } from "@/components/stats/GolfPerformance";
+import { ScoringPerformance } from "@/components/stats/ScoringPerformance";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import {
   Select,
@@ -120,6 +121,7 @@ function StatsPage() {
       </section>
 
       <GolfPerformance stats={golfStats} />
+      <ScoringPerformance stats={golfStats} />
 
       {hasGroups && (
         <section className="px-6 pt-10">
