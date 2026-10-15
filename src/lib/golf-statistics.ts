@@ -11,7 +11,7 @@ export type GolfStatsRound = {
   /** Playing handicap for the round (sign ignored); null = no handicap known. */
   playingHandicap?: number | null;
   /** Stroke index per played hole number. */
-  strokeIndexes?: Record<number, number>;
+  strokeIndexes?: Record<number, number> | undefined;
 };
 
 export type GolfStatsScore = {
