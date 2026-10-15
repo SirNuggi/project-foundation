@@ -47,8 +47,8 @@ describe("Personal golf statistics", () => {
   });
   test("Par scoring averages strokes per par type", () => {
     const r = calculateGolfStatistics("me", [round], [{ ...score, par: 3, strokes: 3 }, { ...score, hole_number: 2, par: 3, strokes: 4 }]);
-    assert.equal(r.parScoring[0].average, 3.5);
-    assert.equal(r.parScoring[1].average, null);
+    assert.equal(r.parScoring[0]?.average, 3.5);
+    assert.equal(r.parScoring[1]?.average, null);
   });
   test("Net Stableford uses handicap strokes by stroke index and only full rounds", () => {
     const nine = { ...round, holeCount: 2, playingHandicap: -1, strokeIndexes: { 1: 1, 2: 2 } };
