@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculateGolfStatistics } from "@/lib/golf-statistics";
-import { buildRoundHoles, playingHandicap } from "@/lib/stableford";
+import { buildRoundHoles } from "@/lib/stableford";
 
 export type StatsRound = {
   id: string;
@@ -154,7 +154,7 @@ export const getMyGolfStatistics = createServerFn({ method: "GET" })
       playedOn: entry.rounds.played_on,
       courseName: entry.rounds.course_name,
       holeCount: entry.rounds.hole_count,
-      playingHandicap: entry.course_handicap === null ? null : playingHandicap(entry.course_handicap, entry.rounds.hole_count),
+      playingHandicap: entry.course_handicap, // already stored as playing handicap for the round length
       strokeIndexes: entry.rounds.course_id && holesByCourse.has(entry.rounds.course_id)
         ? Object.fromEntries(buildRoundHoles(holesByCourse.get(entry.rounds.course_id) ?? [], courseHoleCount.get(entry.rounds.course_id) ?? 18, entry.rounds.hole_count).map((h) => [h.holeNumber, h.strokeIndex]))
         : undefined,
